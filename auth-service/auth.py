@@ -35,9 +35,9 @@ def get_db_connection():
     except OperationalError as e:
         return None, {"error": f"Error connecting to the database: {str(e)}", "parameters": connection_params}
 
-# Function to test the database connection and initialize tables
+# Function to initialize tables in the database
 def initialize_tables():
-    conn, error_info = get_db_connection()
+    conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
@@ -66,7 +66,7 @@ def initialize_tables():
         finally:
             conn.close()
 
-# Route to test the database connection and create tables
+# Route to test the database connection
 @app.route('/auth/test-db', methods=['GET'])
 def test_db_connection():
     conn, error_info = get_db_connection()
