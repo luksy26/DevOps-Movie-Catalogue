@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config-map
+data:
+  POSTGRES_USER: "admin"
+  POSTGRES_PASSWORD: "admin"
+  POSTGRES_DB: "movieApp"
+  POSTGRES_AUTH_TABLE: "users"
+  POSTGRES_DATA_TABLE: "movies"

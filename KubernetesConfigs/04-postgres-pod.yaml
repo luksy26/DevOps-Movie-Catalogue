@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-pod
+  labels:
+    app: postgres
+spec:
+  containers:
+    - image: postgres:10.4
+      name: postgres
+      volumeMounts:
+        - name: myvol
+          mountPath: /var/lib/postgresql/data
+      ports:
+        - containerPort: 5432
+      envFrom:
+        - configMapRef:
+            name: db-config-map
+  volumes:
+    - name: myvol
+      persistentVolumeClaim:
+        claimName: postgres-pvc

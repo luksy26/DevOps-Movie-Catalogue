@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: auth-pod
+  labels:
+    app: auth
+spec:
+  containers:
+    - image: lucaslazaroiu/ccproject:auth-service
+      name: auth-service-container
+      ports:
+        - containerPort: 8090
+      env:
+        - name: PGUSER
+          value: "admin"
+        - name: PGPASSWORD
+          value: "admin"
+        - name: PGDATABASE
+          value: "movieApp"
+        - name: PGAUTHTABLE
+          value: "users"
+        - name: PGDATATABLE
+          value: "postgres"
+        - name: PGHOST
+          value: "postgres"
+        - name: PGPORT
+          value: "5432"
