@@ -39,32 +39,29 @@ def get_db_connection():
 def initialize_tables():
     conn = get_db_connection()
     if conn:
-        try:
-            cur = conn.cursor()
+        cur = conn.cursor()
 
-            # Create `users` table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    username VARCHAR(255) UNIQUE NOT NULL,
-                    password VARCHAR(255) NOT NULL
-                )
+        # Create `users` table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL
+            )
             """)
 
-            # Create `movies` table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS movies (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    genre VARCHAR(100) NOT NULL,
-                    year INT NOT NULL
-                )
+        # Create `movies` table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS movies (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                genre VARCHAR(100) NOT NULL,
+                year INT NOT NULL
+            )
             """)
 
-            conn.commit()  # Save changes
-            cur.close()
-        finally:
-            conn.close()
+        conn.commit()  # Save changes
+        cur.close()
 
 # Route to test the database connection
 @app.route('/auth/test-db', methods=['GET'])
