@@ -20,7 +20,7 @@ spec:
         - name: PGAUTHTABLE
           value: "users"
         - name: PGDATATABLE
-          value: "postgres"
+          value: "movies"
         - name: PGHOST
           value: "postgres"
         - name: PGPORT

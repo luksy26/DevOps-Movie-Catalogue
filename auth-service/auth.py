@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 import psycopg2
 import jwt
 import datetime
-from psycopg2 import sql, OperationalError
+from psycopg2 import OperationalError
 import os
 import bcrypt
 import base64
@@ -37,7 +37,7 @@ def get_db_connection():
 
 # Function to initialize tables in the database
 def initialize_tables():
-    conn = get_db_connection()
+    conn, _ = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
@@ -63,8 +63,11 @@ def initialize_tables():
 
             conn.commit()  # Save changes
             cur.close()
+            return True
         finally:
             conn.close()
+    return False
+
 
 # Route to test the database connection
 @app.route('/auth/test-db', methods=['GET'])
@@ -130,6 +133,12 @@ def login():
             cur.execute("SELECT id, username, password FROM users WHERE username = %s", (username,))
             user = cur.fetchone()
 
+            logging.debug(f"Row for {username} in the database is {user}")
+            
+            # Handle case when user does not exist
+            if not user:
+                return jsonify({"error": "User does not exist"}), 404
+
             # Retrieve the encoded hash from the database
             encoded_hash_from_db = user[2]  # assuming user[2] is the password column
 
@@ -173,5 +182,8 @@ def protected():
         return jsonify({"error": "Invalid token"}), 401
 
 if __name__ == '__main__':
-    initialize_tables()
+    logging.debug("Trying to initialize tables in database")
+    while not initialize_tables():
+        pass
+    logging.debug("Tables created in database")
     app.run(debug=True, host='0.0.0.0', port=5000)
