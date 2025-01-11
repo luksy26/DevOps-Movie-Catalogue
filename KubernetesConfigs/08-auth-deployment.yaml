@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-deployment
+  labels:
+    app: auth
+spec:
+  replicas: 1  # Number of replicas you want for your auth container
+  selector:
+    matchLabels:
+      app: auth  # Match the label of the pod to ensure the deployment controls the pods
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth-service-container
+          image: lucaslazaroiu/ccproject:auth-service
+          ports:
+            - containerPort: 8090
+          env:
+            - name: PGUSER
+              value: "admin"
+            - name: PGPASSWORD
+              value: "admin"
+            - name: PGDATABASE
+              value: "movieApp"
+            - name: PGAUTHTABLE
+              value: "users"
+            - name: PGHOST
+              value: "postgres"
+            - name: PGPORT
+              value: "5432"
+            - name: CATALOGUE_SERVICE_URL
+              value: "http://catalogue:8091"

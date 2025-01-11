@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue-deployment
+  labels:
+    app: catalogue
+spec:
+  replicas: 1  # Number of replicas you want for your catalogue container
+  selector:
+    matchLabels:
+      app: catalogue  # Match the label of the pod to ensure the deployment controls the pods
+  template:
+    metadata:
+      labels:
+        app: catalogue
+    spec:
+      containers:
+        - name: catalogue-service-container
+          image: lucaslazaroiu/ccproject:catalogue-service
+          ports:
+            - containerPort: 8091
+          env:
+            - name: PGUSER
+              value: "admin"
+            - name: PGPASSWORD
+              value: "admin"
+            - name: PGDATABASE
+              value: "movieApp"
+            - name: PGDATATABLE
+              value: "movies"
+            - name: PGHOST
+              value: "postgres"
+            - name: PGPORT
+              value: "5432"

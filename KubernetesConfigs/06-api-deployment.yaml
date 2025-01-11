@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  labels:
+    app: api
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api-service-container
+          image: lucaslazaroiu/ccproject:api-service
+          env:
+            - name: PGUSER
+              value: "admin"
+            - name: PGPASSWORD
+              value: "admin"
+            - name: PGDATATBASE
+              value: "movieApp"
+            - name: PGHOST
+              value: "postgres"
+            - name: PGPORT
+              value: "5432"
+            - name: AUTH_SERVICE_URL
+              value: "http://auth:8090"

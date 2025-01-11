@@ -9,5 +9,8 @@ nodes:
   # Postgres port
   - containerPort: 30001
     hostPort: 30001
+  # Portainer port
+  - containerPort: 30002
+    hostPort: 30002
 - role: worker
 - role: worker
