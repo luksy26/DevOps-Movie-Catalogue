@@ -6,7 +6,8 @@ kubectl apply -f ./KubernetesConfigs/01-configMap.yaml
 kubectl apply -f ./KubernetesConfigs/02-postgres-pv.yaml 
 kubectl apply -f ./KubernetesConfigs/03-postgres-pvc.yaml 
 kubectl apply -f ./KubernetesConfigs/04-postgres-pod.yaml
-kubectl apply -f ./KubernetesConfigs/05-postgres-ClusterIP.yaml 
+kubectl apply -f ./KubernetesConfigs/05-postgres-ClusterIP.yaml
+kubectl apply -f ./KubernetesConfigs/05.1-postgres-NodePort.yaml 
 kubectl apply -f ./KubernetesConfigs/06-api-pod.yaml
 kubectl apply -f ./KubernetesConfigs/07-api-NodePort.yaml
 kubectl apply -f ./KubernetesConfigs/08-auth-pod.yaml 

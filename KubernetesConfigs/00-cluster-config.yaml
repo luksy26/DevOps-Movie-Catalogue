@@ -3,7 +3,11 @@ apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
   extraPortMappings:
+  # API port
   - containerPort: 30000
     hostPort: 30000
+  # Postgres port
+  - containerPort: 30001
+    hostPort: 30001
 - role: worker
 - role: worker
