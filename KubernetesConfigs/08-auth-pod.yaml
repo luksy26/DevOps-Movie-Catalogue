@@ -23,3 +23,5 @@ spec:
           value: "postgres"
         - name: PGPORT
           value: "5432"
+        - name: CATALOGUE_SERVICE_URL
+          value: http://catalogue:8091

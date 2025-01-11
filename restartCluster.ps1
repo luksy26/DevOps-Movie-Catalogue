@@ -12,6 +12,8 @@ kubectl apply -f ./KubernetesConfigs/06-api-pod.yaml
 kubectl apply -f ./KubernetesConfigs/07-api-NodePort.yaml
 kubectl apply -f ./KubernetesConfigs/08-auth-pod.yaml 
 kubectl apply -f ./KubernetesConfigs/09-auth-ClusterIP.yaml
+kubectl apply -f ./KubernetesConfigs/10-catalogue-pod.yaml
+kubectl apply -f ./KubernetesConfigs/11-catalogue-ClusterIP.yaml
 
 Write-Output "Cluster created!"
 kubectl get all -o wide

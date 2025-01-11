@@ -13,11 +13,11 @@ spec:
           value: "admin"
         - name: PGPASSWORD
           value: "admin"
-        - name: PGAUTHTABLE
-          value: "users"
-        - name: PGDATATABLE
-          value: "postgres"
+        - name: PGDATATBASE
+          value: "movieApp"
         - name: PGHOST
           value: "postgres"
         - name: PGPORT
           value: "5432"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth:8090"
