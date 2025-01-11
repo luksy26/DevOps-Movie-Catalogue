@@ -17,6 +17,8 @@ kubectl apply -f ./KubernetesConfigs/11-catalogue-ClusterIP.yaml
 kubectl apply -f ./KubernetesConfigs/12-portainer-pvc.yaml
 kubectl apply -f ./KubernetesConfigs/13-portainer-deployment.yaml
 kubectl apply -f ./KubernetesConfigs/14-portainer-NodePort.yaml
+kubectl apply -f ./KubernetesConfigs/15-portainer-ClusterRole.yaml
+kubectl apply -f ./KubernetesConfigs/16-portainer-ClusterRole-Binding.yaml
 
 Write-Output "Cluster created!"
 kubectl get all -o wide
