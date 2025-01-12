@@ -4,7 +4,7 @@
 - [Introduction](#introduction)
 - [Features](#features)
 - [Architecture](#architecture)
-- [Installation](#installation)
+- [Setup](#setup)
 - [Usage](#usage)
 
 ---
@@ -57,8 +57,7 @@ Here is a visual representation of the architecture:
 
 ---
 
-## Installation
-
+## Setup
 ### Prerequisites:
 - **docker-desktop** (or docker CE for Linux)
 - **kind**
