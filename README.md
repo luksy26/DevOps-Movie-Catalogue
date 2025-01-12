@@ -113,5 +113,5 @@ The entire Kubernetes **architecture** (i.e. pods, deployments, persistentVolume
 
 3. The **Portainer** web interface can be accessed via http://localhost:30002. If a timeout message happens to be displayed, just **restart** the portainer deployment:
     ```bash
-    kubectl rollout restart deployment portainer
+    kubectl rollout restart deployment portainer-deployment
     ```
