@@ -119,3 +119,5 @@ Here is a visual representation of the architecture:
     ```bash
     kubectl rollout restart deployment portainer-deployment
     ```
+
+---
