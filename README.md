@@ -47,7 +47,7 @@ The third-party pods (docker images publicly available) are:
 
 The **api**, **postgres** and **portainer** pods are also exposed locally, each using a **NodePort** service. The **api** is exposed for obvious reasons, the **postgres** pod is exposed for integration with database tools (e.g. **DBeaver**), and **portainer** is exposed for accessing the portainer web interface.
 
-Intra-cluster communication is done with **ClusterIP** services. **Postgres** and **Portainer** also use some **PersistenVolumes** and **PersistentVolumeClaims**. The latter also needs a **ClusterRole** and  **ClusterRoleBinding** in order to access the cluster's resources.
+Intra-cluster communication is done with **ClusterIP** services. **Postgres** and **Portainer** also use some **PersistentVolumes** and **PersistentVolumeClaims**. The latter also needs a **ClusterRole** and  **ClusterRoleBinding** in order to access the cluster's resources.
 
 The entire Kubernetes **architecture** (i.e. pods, deployments, persistentVolumes etc.) is being built with **Terraform**, using the **"kubernetes"** provider.
 
