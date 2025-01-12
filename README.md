@@ -51,6 +51,10 @@ Intra-cluster communication is done with **ClusterIP** services. **Postgres** an
 
 The entire Kubernetes **architecture** (i.e. pods, deployments, persistentVolumes etc.) is being built with **Terraform**, using the **"kubernetes"** provider.
 
+Here is a visual representation of the architecture:
+
+![Architecture Diagram](./CCMovieCatalogue.svg)
+
 ---
 
 ## Installation
