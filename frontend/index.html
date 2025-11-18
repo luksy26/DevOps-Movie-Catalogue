@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Catalogue</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .db-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #f0f0f0;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-dot.connected {
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            width: auto;
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .link-btn {
+            background: none;
+            color: #667eea;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 15px;
+            display: block;
+            text-align: center;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #c33;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3c3;
+        }
+
+        .movie-list {
+            margin-top: 20px;
+        }
+
+        .movie-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+
+        .movie-card:hover {
+            transform: translateX(5px);
+        }
+
+        .movie-info h3 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .movie-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .user-info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .add-movie-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Movie Catalogue</h1>
+            <div class="db-status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Checking database...</span>
+            </div>
+        </div>
+
+        <!-- Login View -->
+        <div id="loginView" class="view active">
+            <div id="loginError" class="error-message hidden"></div>
+            <div class="form-group">
+                <label for="loginUsername">Username</label>
+                <input type="text" id="loginUsername" placeholder="Enter your username">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter your password">
+            </div>
+            <button class="btn" onclick="login()">Login</button>
+            <button class="link-btn" onclick="showRegister()">Don't have an account? Register</button>
+        </div>
+
+        <!-- Register View -->
+        <div id="registerView" class="view">
+            <div id="registerError" class="error-message hidden"></div>
+            <div id="registerSuccess" class="success-message hidden"></div>
+            <div class="form-group">
+                <label for="registerUsername">Username</label>
+                <input type="text" id="registerUsername" placeholder="Choose a username">
+            </div>
+            <div class="form-group">
+                <label for="registerPassword">Password</label>
+                <input type="password" id="registerPassword" placeholder="Choose a password">
+            </div>
+            <button class="btn" onclick="register()">Register</button>
+            <button class="link-btn" onclick="showLogin()">Already have an account? Login</button>
+        </div>
+
+        <!-- Movies View -->
+        <div id="moviesView" class="view">
+            <div class="user-info">
+                <span>Welcome, <strong id="currentUser"></strong>!</span>
+                <button class="btn btn-secondary" style="width: auto; padding: 8px 16px;" onclick="logout()">Logout</button>
+            </div>
+
+            <div class="add-movie-form">
+                <h3 style="margin-bottom: 15px;">Add New Movie</h3>
+                <div id="addMovieError" class="error-message hidden"></div>
+                <div id="addMovieSuccess" class="success-message hidden"></div>
+                <div class="form-row">
+                    <div class="form-group" style="margin: 0;">
+                        <input type="text" id="movieName" placeholder="Movie name">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <input type="text" id="movieGenre" placeholder="Genre">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <input type="number" id="movieYear" placeholder="Year">
+                    </div>
+                </div>
+                <button class="btn" onclick="addMovie()">Add Movie</button>
+            </div>
+
+            <h3 style="margin-bottom: 15px;">Your Movies</h3>
+            <div id="loadingMovies" class="loading hidden">Loading movies...</div>
+            <div id="moviesList" class="movie-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:30000/api';
+        let authToken = null;
+        let currentUsername = null;
+
+        // Check database status on load
+        async function checkDatabaseStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/testauth`);
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('statusDot').classList.add('connected');
+                    document.getElementById('statusText').textContent = 'Database connected';
+                }
+            } catch (error) {
+                document.getElementById('statusText').textContent = 'Database disconnected';
+            }
+        }
+
+        // Show different views
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function showLogin() {
+            showView('loginView');
+            clearMessages();
+        }
+
+        function showRegister() {
+            showView('registerView');
+            clearMessages();
+        }
+
+        function showMovies() {
+            showView('moviesView');
+            document.getElementById('currentUser').textContent = currentUsername;
+            loadMovies();
+        }
+
+        function clearMessages() {
+            document.querySelectorAll('.error-message, .success-message').forEach(el => {
+                el.classList.add('hidden');
+            });
+        }
+
+        // Register
+        async function register() {
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const errorEl = document.getElementById('registerError');
+            const successEl = document.getElementById('registerSuccess');
+
+            clearMessages();
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please fill in all fields';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successEl.textContent = `Account created successfully! You can now login.`;
+                    successEl.classList.remove('hidden');
+                    document.getElementById('registerUsername').value = '';
+                    document.getElementById('registerPassword').value = '';
+                } else {
+                    errorEl.textContent = data.error || 'Registration failed';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        // Login
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+
+            clearMessages();
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please fill in all fields';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    currentUsername = username;
+                    showMovies();
+                } else {
+                    errorEl.textContent = data.error || 'Login failed';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        // Logout
+        function logout() {
+            authToken = null;
+            currentUsername = null;
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            showLogin();
+        }
+
+        // Load movies
+        async function loadMovies() {
+            const moviesListEl = document.getElementById('moviesList');
+            const loadingEl = document.getElementById('loadingMovies');
+
+            loadingEl.classList.remove('hidden');
+            moviesListEl.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/movies`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                loadingEl.classList.add('hidden');
+
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    logout();
+                    return;
+                }
+
+                if (data.movies && data.movies.length > 0) {
+                    moviesListEl.innerHTML = data.movies.map(movie => `
+                        <div class="movie-card">
+                            <div class="movie-info">
+                                <h3>${movie.name}</h3>
+                                <p><strong>Genre:</strong> ${movie.genre} | <strong>Year:</strong> ${movie.year}</p>
+                            </div>
+                            <button class="btn btn-danger" onclick="deleteMovie('${movie.name}', ${movie.year})">Delete</button>
+                        </div>
+                    `).join('');
+                } else {
+                    moviesListEl.innerHTML = '<p style="text-align: center; color: #666;">No movies yet. Add your first movie!</p>';
+                }
+            } catch (error) {
+                loadingEl.classList.add('hidden');
+                moviesListEl.innerHTML = '<p style="text-align: center; color: #c33;">Error loading movies</p>';
+            }
+        }
+
+        // Add movie
+        async function addMovie() {
+            const name = document.getElementById('movieName').value;
+            const genre = document.getElementById('movieGenre').value;
+            const year = parseInt(document.getElementById('movieYear').value);
+            const errorEl = document.getElementById('addMovieError');
+            const successEl = document.getElementById('addMovieSuccess');
+
+            clearMessages();
+
+            if (!name || !genre || !year) {
+                errorEl.textContent = 'Please fill in all fields';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/movies`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ name, genre, year })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    logout();
+                    return;
+                }
+
+                if (response.ok) {
+                    successEl.textContent = 'Movie added successfully!';
+                    successEl.classList.remove('hidden');
+                    document.getElementById('movieName').value = '';
+                    document.getElementById('movieGenre').value = '';
+                    document.getElementById('movieYear').value = '';
+                    loadMovies();
+                    setTimeout(() => successEl.classList.add('hidden'), 3000);
+                } else {
+                    errorEl.textContent = data.error || 'Failed to add movie';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        // Delete movie
+        async function deleteMovie(name, year) {
+            if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/movies`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ name, year })
+                });
+
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    logout();
+                    return;
+                }
+
+                if (response.ok) {
+                    loadMovies();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to delete movie');
+                }
+            } catch (error) {
+                alert('Connection error. Please try again.');
+            }
+        }
+
+        // Initialize
+        checkDatabaseStatus();
+        
+        // Add enter key support for login
+        document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+        
+        document.getElementById('registerPassword').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') register();
+        });
+    </script>
+</body>
+</html>
+

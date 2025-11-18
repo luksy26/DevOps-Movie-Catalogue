@@ -1,5 +1,5 @@
 provider "kubernetes" {
-  config_path = "C:/Users/Lucas/.kube/config"
+  config_path = "/Users/llazaroiu/.kube/config"
 }
 
 # Get all YAML manifest files from the KubernetesConfigs folder
