@@ -36,8 +36,17 @@ echo "========================================="
 echo ""
 echo "Your services are available at:"
 echo "  - API Service:    http://localhost:30000"
-echo "  - Portainer:      http://localhost:30002"
+echo "  - Portainer UI:   http://localhost:30002"
 echo "  - PostgreSQL:     localhost:30001"
+echo "  - Frontend:       http://localhost:8000 (run: cd frontend && ./serve.sh)"
+echo ""
+echo "Portainer Agent Address (for Kubernetes environment setup):"
+AGENT_ADDRESS=$(kubectl get service portainer-agent -n portainer -o jsonpath='{.spec.clusterIP}:{.spec.ports[0].port}' 2>/dev/null)
+if [ -n "$AGENT_ADDRESS" ]; then
+    echo "  $AGENT_ADDRESS"
+else
+    echo "  (Agent service not ready yet, run: kubectl get svc portainer-agent -n portainer)"
+fi
 echo ""
 echo "To view all resources: kubectl get all -n default -o wide"
 echo ""

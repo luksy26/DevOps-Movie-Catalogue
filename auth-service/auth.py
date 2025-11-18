@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import requests
 import psycopg2
 import jwt
@@ -13,6 +14,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Catalogue Service URL
 CATALOGUE_SERVICE_URL = os.environ.get(

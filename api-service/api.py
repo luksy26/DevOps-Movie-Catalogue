@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import os
 import logging
@@ -7,6 +8,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Authentication Service URL
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth:8090")
