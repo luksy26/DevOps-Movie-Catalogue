@@ -33,6 +33,6 @@ spec:
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
-              value: "10.96.60.160" # PGHOSTADDR
+              value: "10.96.152.98" # PGHOSTADDR
             - name: PGPORT
               value: "5432"

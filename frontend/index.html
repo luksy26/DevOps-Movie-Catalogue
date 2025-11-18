@@ -195,6 +195,28 @@
             font-size: 0.9em;
         }
 
+        .movie-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .delete-confirm {
+            display: flex;
+            gap: 8px;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .delete-confirm .btn {
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+
         .user-info {
             background: #f0f0f0;
             padding: 15px;
@@ -489,13 +511,19 @@
                 }
 
                 if (data.movies && data.movies.length > 0) {
-                    moviesListEl.innerHTML = data.movies.map(movie => `
-                        <div class="movie-card">
+                    moviesListEl.innerHTML = data.movies.map((movie, index) => `
+                        <div class="movie-card" id="movie-${index}">
                             <div class="movie-info">
                                 <h3>${movie.name}</h3>
                                 <p><strong>Genre:</strong> ${movie.genre} | <strong>Year:</strong> ${movie.year}</p>
                             </div>
-                            <button class="btn btn-danger" onclick="deleteMovie('${movie.name}', ${movie.year})">Delete</button>
+                            <div class="movie-actions">
+                                <button class="btn btn-danger delete-btn" onclick="showDeleteConfirm(${index}, '${movie.name}', ${movie.year})">Delete</button>
+                                <div class="delete-confirm hidden" id="confirm-${index}">
+                                    <button class="btn btn-danger" onclick="confirmDelete('${movie.name}', ${movie.year})">✓ Confirm</button>
+                                    <button class="btn" onclick="cancelDelete(${index})">✗ Cancel</button>
+                                </div>
+                            </div>
                         </div>
                     `).join('');
                 } else {
@@ -559,12 +587,30 @@
             }
         }
 
+        // Show delete confirmation
+        function showDeleteConfirm(index, name, year) {
+            // Hide all other confirmation dialogs
+            document.querySelectorAll('.delete-confirm').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.delete-btn').forEach(el => el.classList.remove('hidden'));
+            
+            // Show this one
+            document.querySelector(`#movie-${index} .delete-btn`).classList.add('hidden');
+            document.getElementById(`confirm-${index}`).classList.remove('hidden');
+        }
+
+        // Cancel delete
+        function cancelDelete(index) {
+            document.querySelector(`#movie-${index} .delete-btn`).classList.remove('hidden');
+            document.getElementById(`confirm-${index}`).classList.add('hidden');
+        }
+
+        // Confirm and delete movie
+        async function confirmDelete(name, year) {
+            await deleteMovie(name, year);
+        }
+
         // Delete movie
         async function deleteMovie(name, year) {
-            if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-                return;
-            }
-
             try {
                 const response = await fetch(`${API_BASE}/movies`, {
                     method: 'DELETE',
