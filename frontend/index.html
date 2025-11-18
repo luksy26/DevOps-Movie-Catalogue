@@ -443,7 +443,7 @@
 
             try {
                 const response = await fetch(`${API_BASE}/movies`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                    headers: { 'Authorization': authToken }
                 });
 
                 const data = await response.json();
@@ -495,7 +495,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'Authorization': authToken
                     },
                     body: JSON.stringify({ name, genre, year })
                 });
@@ -537,7 +537,7 @@
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'Authorization': authToken
                     },
                     body: JSON.stringify({ name, year })
                 });
