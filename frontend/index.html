@@ -306,6 +306,34 @@
         let authToken = null;
         let currentUsername = null;
 
+        // Load auth state from localStorage
+        function loadAuthState() {
+            const savedToken = localStorage.getItem('authToken');
+            const savedUsername = localStorage.getItem('currentUsername');
+            const savedView = localStorage.getItem('currentView');
+            
+            if (savedToken && savedUsername) {
+                authToken = savedToken;
+                currentUsername = savedUsername;
+                showMovies();
+            } else if (savedView === 'register') {
+                showRegister();
+            }
+        }
+
+        // Save auth state to localStorage
+        function saveAuthState() {
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('currentUsername', currentUsername);
+        }
+
+        // Clear auth state from localStorage
+        function clearAuthState() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUsername');
+            localStorage.removeItem('currentView');
+        }
+
         // Check database status on load
         async function checkDatabaseStatus() {
             try {
@@ -329,16 +357,19 @@
         function showLogin() {
             showView('loginView');
             clearMessages();
+            localStorage.setItem('currentView', 'login');
         }
 
         function showRegister() {
             showView('registerView');
             clearMessages();
+            localStorage.setItem('currentView', 'register');
         }
 
         function showMovies() {
             showView('moviesView');
             document.getElementById('currentUser').textContent = currentUsername;
+            localStorage.setItem('currentView', 'movies');
             loadMovies();
         }
 
@@ -413,6 +444,7 @@
                 if (response.ok) {
                     authToken = data.token;
                     currentUsername = username;
+                    saveAuthState();
                     showMovies();
                 } else {
                     errorEl.textContent = data.error || 'Login failed';
@@ -428,6 +460,7 @@
         function logout() {
             authToken = null;
             currentUsername = null;
+            clearAuthState();
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
             showLogin();
@@ -561,6 +594,7 @@
 
         // Initialize
         checkDatabaseStatus();
+        loadAuthState();
         
         // Add enter key support for login
         document.getElementById('loginPassword').addEventListener('keypress', (e) => {
