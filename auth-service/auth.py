@@ -260,7 +260,7 @@ def add_movie():
         }
 
         # Send POST request to the catalogue service to add the movie
-        response = session.post(
+        response = requests.post(
             f"{CATALOGUE_SERVICE_URL}/catalogue/movies",
             json=jsonData,
             timeout=5
@@ -312,7 +312,7 @@ def delete_movie():
         }
 
         # Send DELETE request to the catalogue service to delete the movie
-        response = session.delete(
+        response = requests.delete(
             f"{CATALOGUE_SERVICE_URL}/catalogue/movies",
             json=jsonData,
             timeout=5
