@@ -13,6 +13,7 @@ CORS(app)  # Enable CORS for all routes
 
 # Database configuration (read from environment variables)
 DB_HOST = os.environ.get("PGHOST", "postgres")
+DB_HOSTADDR = os.environ.get("PGHOSTADDR")  # IP address to bypass DNS
 DB_USER = os.environ.get("PGUSER", "admin")
 DB_PASSWORD = os.environ.get("PGPASSWORD", "admin")
 DB_NAME = os.environ.get("PGDATABASE", "movieApp")
@@ -20,21 +21,25 @@ DB_NAME = os.environ.get("PGDATABASE", "movieApp")
 # Function to establish a database connection
 def get_db_connection():
     connection_params = {
-        "host": DB_HOST,
         "port": 5432,
         "database": DB_NAME,
         "user": DB_USER,
         "password": DB_PASSWORD,
     }
+    
+    # Use IP address if provided to bypass DNS resolution
+    if DB_HOSTADDR:
+        connection_params["host"] = DB_HOSTADDR
+    else:
+        connection_params["host"] = DB_HOST
+    
     try:
         conn = psycopg2.connect(**connection_params)
-        return conn, None  # Connection succeeded, return it
+        return conn, None
     except OperationalError as e:
-        return None, {
-            "error": 
-                f"Error connecting to the database: {str(e)}", 
-                "parameters": connection_params
-            }
+        return None, {"error": f"Error connecting to database: {str(e)}"}
+    except Exception as e:
+        return None, {"error": f"Error: {str(e)}"}
 
 # Function to initialize 'movies' table in the database
 def initialize_table():
@@ -75,6 +80,10 @@ def test_db_connection():
 # Get Movie list for a user
 @app.route('/catalogue/movies', methods=['GET'])
 def get_movies():
+    import time
+    start_time = time.time()
+    logging.info(f"[TIMING] get_movies started")
+    
     data = request.get_json()
     user_id = data.get('user_id')
 
@@ -86,7 +95,9 @@ def get_movies():
         ), 400
 
     # Get movies for the given user from the database
+    logging.info(f"[TIMING] Before get_db_connection: {time.time() - start_time:.3f}s")
     conn, error_info = get_db_connection()
+    logging.info(f"[TIMING] After get_db_connection: {time.time() - start_time:.3f}s")
     if conn:
         try:
             cur = conn.cursor()

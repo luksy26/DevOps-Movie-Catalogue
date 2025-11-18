@@ -18,6 +18,7 @@ spec:
       containers:
         - name: api-service-container
           image: lucaslazaroiu/ccproject:api-service
+          imagePullPolicy: Always
           env:
             - name: PGUSER
               value: "admin"
@@ -27,7 +28,9 @@ spec:
               value: "movieApp"
             - name: PGHOST
               value: "postgres"
+            - name: PGHOSTADDR
+              value: "10.96.60.160" # PGHOSTADDR
             - name: PGPORT
               value: "5432"
             - name: AUTH_SERVICE_URL
-              value: "http://auth:8090"
+              value: "http://10.96.35.29:8090" # AUTH_SERVICE_URL

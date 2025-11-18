@@ -16,7 +16,7 @@ AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth:8090")
 @app.route('/api/testauth', methods=['GET'])
 def api_testauth():
     try:
-        response = requests.get(f"{AUTH_SERVICE_URL}/auth/test-db")
+        response = requests.get(f"{AUTH_SERVICE_URL}/auth/test-db", timeout=5)
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify(
@@ -34,7 +34,7 @@ def api_register():
     data = request.get_json()
     try:
         # Forward registration to the authentication service
-        response = requests.post(f"{AUTH_SERVICE_URL}/auth/register", json=data)
+        response = requests.post(f"{AUTH_SERVICE_URL}/auth/register", json=data, timeout=5)
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify(
@@ -52,7 +52,7 @@ def api_login():
     data = request.get_json()
     try:
         # Forward login request to the authentication service
-        response = requests.post(f"{AUTH_SERVICE_URL}/auth/login", json=data)
+        response = requests.post(f"{AUTH_SERVICE_URL}/auth/login", json=data, timeout=5)
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify(
@@ -77,7 +77,8 @@ def api_protected():
     try:
         response = requests.get(
             f"{AUTH_SERVICE_URL}/auth/protected",
-            headers={"Authorization": token}
+            headers={"Authorization": token},
+            timeout=5
             )
         if response.status_code == 200:
             # If token is valid, perform business logic or call another pod
@@ -99,14 +100,21 @@ def api_protected():
     
 @app.route('/api/movies', methods=['GET'])
 def get_movies():
+    import time
+    start_time = time.time()
+    logging.info(f"[TIMING] api get_movies started")
+    
     token = request.headers.get('Authorization')
     if not token:
         return jsonify({"message": "Token is missing"}), 401
     try:
+        logging.info(f"[TIMING] Before auth call: {time.time() - start_time:.3f}s")
         response = requests.get(
             f"{AUTH_SERVICE_URL}/auth/movies",
-            headers={"Authorization": token}
+            headers={"Authorization": token},
+            timeout=5
         )
+        logging.info(f"[TIMING] After auth call: {time.time() - start_time:.3f}s")
         logging.debug("Response has code: " + str(response.status_code))
         logging.debug("Response content: " + response.text)
 
@@ -143,7 +151,8 @@ def post_movie():
         response = requests.post(
             f"{AUTH_SERVICE_URL}/auth/movies",
             headers={"Authorization": token},
-            json=data
+            json=data,
+            timeout=5
             )
         if response.status_code == 201:
             # If token is valid, perform business logic or call another pod
@@ -173,7 +182,8 @@ def delete_movie():
         response = requests.delete(
             f"{AUTH_SERVICE_URL}/auth/movies",
             headers={"Authorization": token},
-            json=data
+            json=data,
+            timeout=5
         )
         if response.status_code == 200:
             return jsonify(

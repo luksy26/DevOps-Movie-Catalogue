@@ -24,6 +24,7 @@ CATALOGUE_SERVICE_URL = os.environ.get(
 
 # Database configuration (read from environment variables)
 DB_HOST = os.environ.get("PGHOST", "postgres")
+DB_HOSTADDR = os.environ.get("PGHOSTADDR")  # IP address to bypass DNS
 DB_USER = os.environ.get("PGUSER", "admin")
 DB_PASSWORD = os.environ.get("PGPASSWORD", "admin")
 DB_NAME = os.environ.get("PGDATABASE", "movieApp")
@@ -32,21 +33,25 @@ JWT_SECRET = "my_secret_key"  # ideally envv in prod
 # Function to establish a database connection
 def get_db_connection():
     connection_params = {
-        "host": DB_HOST,
         "port": 5432,
         "database": DB_NAME,
         "user": DB_USER,
         "password": DB_PASSWORD,
     }
+    
+    # Use IP address if provided to bypass DNS resolution
+    if DB_HOSTADDR:
+        connection_params["host"] = DB_HOSTADDR
+    else:
+        connection_params["host"] = DB_HOST
+    
     try:
         conn = psycopg2.connect(**connection_params)
-        return conn, None  # Connection succeeded, return it
+        return conn, None
     except OperationalError as e:
-        return None, {
-            "error": 
-                f"Error connecting to the database: {str(e)}",
-                "parameters": connection_params
-            }
+        return None, {"error": f"Error connecting to database: {str(e)}"}
+    except Exception as e:
+        return None, {"error": f"Error: {str(e)}"}
 
 # Function to initialize 'users't able in the database
 def initialize_table():
@@ -194,18 +199,26 @@ def login():
 
 @app.route('/auth/movies', methods=['GET'])
 def get_movies():
+    import time
+    start_time = time.time()
+    logging.info(f"[TIMING] auth get_movies started")
+    
     token = request.headers.get('Authorization')
     if not token:
         return jsonify({"error": "Token is missing"}), 401
 
     try:
         decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        logging.info(f"[TIMING] After JWT decode: {time.time() - start_time:.3f}s")
         user_id = decoded_token.get('user_id')
         jsonData = {"user_id": user_id}
+        logging.info(f"[TIMING] Before catalogue call: {time.time() - start_time:.3f}s")
         response = requests.get(
             f"{CATALOGUE_SERVICE_URL}/catalogue/movies",
-            json = jsonData
+            json=jsonData,
+            timeout=5
         )
+        logging.info(f"[TIMING] After catalogue call: {time.time() - start_time:.3f}s")
         logging.debug("Response from catalogue is: " + response.text)
         return jsonify(response.json()), response.status_code
     except jwt.ExpiredSignatureError:
@@ -247,9 +260,10 @@ def add_movie():
         }
 
         # Send POST request to the catalogue service to add the movie
-        response = requests.post(
+        response = session.post(
             f"{CATALOGUE_SERVICE_URL}/catalogue/movies",
-            json=jsonData
+            json=jsonData,
+            timeout=5
         )
 
         # Return the response from the catalogue service
@@ -298,9 +312,10 @@ def delete_movie():
         }
 
         # Send DELETE request to the catalogue service to delete the movie
-        response = requests.delete(
+        response = session.delete(
             f"{CATALOGUE_SERVICE_URL}/catalogue/movies",
-            json=jsonData
+            json=jsonData,
+            timeout=5
         )
 
         # Return the response from the catalogue service

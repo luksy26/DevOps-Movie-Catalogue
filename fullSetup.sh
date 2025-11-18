@@ -31,6 +31,19 @@ fi
 
 echo ""
 echo "========================================="
+echo ""
+
+# Step 3: Update service IPs
+echo "Step 3: Updating service IPs in deployments..."
+./updateServiceIPs.sh
+
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to update service IPs"
+    exit 1
+fi
+
+echo ""
+echo "========================================="
 echo "  ✅ Setup Complete!"
 echo "========================================="
 echo ""
