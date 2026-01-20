@@ -361,6 +361,27 @@ def protected():
     except jwt.InvalidTokenError:
         return jsonify({"error": "Invalid token"}), 401
 
+@app.route('/auth/all-movies', methods=['GET'])
+def get_all_movies():
+    """
+    Get all movies from the master catalogue.
+    No authentication required - public catalogue.
+    """
+    try:
+        response = requests.get(
+            f"{CATALOGUE_SERVICE_URL}/catalogue/all-movies",
+            timeout=5
+        )
+        logging.debug("Response from catalogue/all-movies: " + response.text)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to catalogue service",
+                "details": str(e)
+            }
+        ), 500
+
 if __name__ == '__main__':
     logging.debug("Trying to initialize 'users' table in database...")
     while not initialize_table():

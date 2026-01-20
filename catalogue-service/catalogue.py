@@ -4,6 +4,7 @@ import psycopg2
 from psycopg2 import OperationalError
 import os
 import logging
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -17,6 +18,32 @@ DB_HOSTADDR = os.environ.get("PGHOSTADDR")  # IP address to bypass DNS
 DB_USER = os.environ.get("PGUSER", "admin")
 DB_PASSWORD = os.environ.get("PGPASSWORD", "admin")
 DB_NAME = os.environ.get("PGDATABASE", "movieApp")
+
+# TMDB API configuration
+TMDB_API_TOKEN = os.environ.get("TMDB_API_TOKEN", "")
+
+# TMDB Genre ID to name mapping
+GENRE_MAP = {
+    28: "Action",
+    12: "Adventure",
+    16: "Animation",
+    35: "Comedy",
+    80: "Crime",
+    99: "Documentary",
+    18: "Drama",
+    10751: "Family",
+    14: "Fantasy",
+    36: "History",
+    27: "Horror",
+    10402: "Music",
+    9648: "Mystery",
+    10749: "Romance",
+    878: "Science Fiction",
+    10770: "TV Movie",
+    53: "Thriller",
+    10752: "War",
+    37: "Western"
+}
 
 # Function to establish a database connection
 def get_db_connection():
@@ -41,22 +68,35 @@ def get_db_connection():
     except Exception as e:
         return None, {"error": f"Error: {str(e)}"}
 
-# Function to initialize 'movies' table in the database
+# Function to initialize tables in the database
 def initialize_table():
     conn, _ = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
 
-            # Create `movies` table
+            # Create `userMovies` table (renamed from movies)
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS movies (
+                CREATE TABLE IF NOT EXISTS userMovies (
                     id SERIAL PRIMARY KEY,
                     user_id INT NOT NULL,
                     name VARCHAR(255) NOT NULL,
                     genre VARCHAR(100) NOT NULL,
                     year INT NOT NULL
+                )
+                """
+            )
+
+            # Create `allMovies` table (master catalogue)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS allMovies (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    genre VARCHAR(100) NOT NULL,
+                    year INT NOT NULL,
+                    UNIQUE(name, year)
                 )
                 """
             )
@@ -67,6 +107,110 @@ def initialize_table():
         finally:
             conn.close()
     return False
+
+# Function to fetch movies from TMDB API and populate allMovies table
+def populate_movies_from_tmdb():
+    """
+    Fetch popular movies from TMDB API (first 10 pages) and populate allMovies table
+    """
+    if not TMDB_API_TOKEN:
+        logging.warning("TMDB_API_TOKEN not configured. Skipping movie population.")
+        return False
+    
+    logging.info("Starting to fetch movies from TMDB API...")
+    
+    conn, error_info = get_db_connection()
+    if not conn:
+        logging.error(f"Could not connect to database: {error_info}")
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        # Check if allMovies table already has data
+        cur.execute("SELECT COUNT(*) FROM allMovies")
+        count = cur.fetchone()[0]
+        
+        if count > 0:
+            logging.info(f"allMovies table already has {count} movies. Skipping population.")
+            cur.close()
+            conn.close()
+            return True
+        
+        total_movies_added = 0
+        
+        # Fetch first 10 pages from TMDB
+        for page in range(1, 11):
+            logging.info(f"Fetching page {page}/10 from TMDB...")
+            
+            try:
+                response = requests.get(
+                    'https://api.themoviedb.org/3/movie/popular',
+                    params={'language': 'en-US', 'page': page},
+                    headers={
+                        'Authorization': f'Bearer {TMDB_API_TOKEN}',
+                        'accept': 'application/json'
+                    },
+                    timeout=10
+                )
+                
+                if response.status_code != 200:
+                    logging.error(f"TMDB API returned status {response.status_code} for page {page}")
+                    continue
+                
+                data = response.json()
+                results = data.get('results', [])
+                
+                logging.info(f"Processing {len(results)} movies from page {page}...")
+                
+                for movie in results:
+                    try:
+                        # Extract movie data
+                        title = movie.get('title') or movie.get('original_title', 'Unknown')
+                        release_date = movie.get('release_date', '')
+                        year = int(release_date.split('-')[0]) if release_date else 0
+                        
+                        # Get first genre from genre_ids
+                        genre_ids = movie.get('genre_ids', [])
+                        genre = GENRE_MAP.get(genre_ids[0], 'Unknown') if genre_ids else 'Unknown'
+                        
+                        # Skip movies without valid year
+                        if year == 0:
+                            continue
+                        
+                        # Insert into allMovies table (ignore duplicates)
+                        cur.execute(
+                            """
+                            INSERT INTO allMovies (name, genre, year)
+                            VALUES (%s, %s, %s)
+                            ON CONFLICT (name, year) DO NOTHING
+                            """,
+                            (title, genre, year)
+                        )
+                        
+                        total_movies_added += 1
+                        
+                    except Exception as e:
+                        logging.warning(f"Error processing movie: {e}")
+                        continue
+                
+                # Commit after each page
+                conn.commit()
+                logging.info(f"Page {page} processed successfully")
+                
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Error fetching page {page} from TMDB: {e}")
+                continue
+        
+        cur.close()
+        logging.info(f"✅ Successfully populated allMovies with {total_movies_added} movies from TMDB")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error populating movies from TMDB: {e}")
+        return False
+    finally:
+        conn.close()
 
 # Route to test the database connection
 @app.route('/catalogue/test-db', methods=['GET'])
@@ -106,7 +250,7 @@ def get_movies():
             cur.execute(
                 """
                 SELECT name, genre, year
-                FROM movies
+                FROM userMovies
                 WHERE user_id = %s
                 """,
                 (user_id,)
@@ -166,7 +310,7 @@ def add_movie():
             # Insert new movie for the user_id
             cur.execute(
                 """
-                INSERT INTO movies (user_id, name, genre, year)
+                INSERT INTO userMovies (user_id, name, genre, year)
                 VALUES (%s, %s, %s, %s)
                 RETURNING id, name, genre, year
                 """,
@@ -217,7 +361,7 @@ def delete_movie():
 
             # Check if the movie exists
             cur.execute(
-                "SELECT id FROM movies "
+                "SELECT id FROM userMovies "
                 "WHERE name = %s AND year = %s AND user_id = %s",
                 (name, year, user_id)
             )
@@ -228,7 +372,7 @@ def delete_movie():
 
             # Delete the movie
             cur.execute(
-                "DELETE FROM movies "
+                "DELETE FROM userMovies "
                 "WHERE name = %s AND year = %s AND user_id = %s",
                 (name, year, user_id)
             )
@@ -243,9 +387,65 @@ def delete_movie():
 
     return jsonify(error_info), 500
 
+# Get all movies from the master catalogue
+@app.route('/catalogue/all-movies', methods=['GET'])
+def get_all_movies():
+    """
+    Get all movies from the master catalogue (allMovies table)
+    """
+    conn, error_info = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+
+            # Fetch all movies from the catalogue
+            cur.execute(
+                """
+                SELECT id, name, genre, year
+                FROM allMovies
+                ORDER BY name ASC
+                """
+            )
+
+            movies = cur.fetchall()
+            logging.debug(f"Found {len(movies)} movies in catalogue")
+
+            if not movies:
+                return jsonify(
+                    {
+                        "message": "No movies in catalogue yet",
+                        "movies": []
+                    }
+                ), 200
+
+            # Format the movie list
+            movie_list = [
+                {
+                    "id": movie[0],
+                    "name": movie[1], 
+                    "genre": movie[2], 
+                    "year": movie[3]
+                } 
+                for movie in movies
+            ]
+
+            cur.close()
+            return jsonify({"movies": movie_list}), 200
+        except psycopg2.Error as e:
+            return jsonify({"error": f"Error fetching catalogue: {str(e)}"}), 500
+        finally:
+            conn.close()
+
+    return jsonify(error_info), 500
+
 if __name__ == '__main__':
-    logging.debug("Trying to initialize 'movies' table in database...")
+    logging.debug("Trying to initialize 'userMovies' and 'allMovies' tables in database...")
     while not initialize_table():
         pass
-    logging.debug("'movies' table created in database.")
+    logging.debug("'userMovies' and 'allMovies' tables created in database.")
+    
+    # Populate allMovies from TMDB API
+    logging.info("Checking if allMovies table needs to be populated...")
+    populate_movies_from_tmdb()
+    
     app.run(debug=True, host='0.0.0.0', port=5001)

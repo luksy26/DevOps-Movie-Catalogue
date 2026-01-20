@@ -25,8 +25,9 @@ All Kubernetes resources are also created using **Terraform**.
 - **Sign-up**
 - **Login**
 - **Getting** the current user's **list of movies**
-- **Adding** a movie to the **current user's list**
+- **Adding** a movie to the **current user's list** (manually or from catalogue)
 - **Deleting** a movie from the **current user's list**
+- **Browsing** the movie catalogue (auto-populated from TMDB API)
 
 ---
 
@@ -69,7 +70,13 @@ Here is a visual representation of the architecture:
     ```bash
    git clone https://github.com/luksy26/DevOps-Movie-Catalogue.git
    ```
-2. Create the kind cluster:
+2. **Configure TMDB API Token** (Optional but recommended):
+   - Get your free API token from [TMDB](https://www.themoviedb.org/settings/api)
+   - Edit `KubernetesConfigs/01-configMap.yaml` and replace `YOUR_TMDB_API_TOKEN_HERE` with your token
+   - See [TMDB_SETUP.md](./TMDB_SETUP.md) for detailed instructions
+   - This will auto-populate the movie catalogue with ~200 popular movies
+
+3. Create the kind cluster:
    ```bash
    kind create cluster --config 00-cluster-config.yaml
    ```
@@ -81,7 +88,7 @@ Here is a visual representation of the architecture:
    ```bash
    kubectl cluster-info --context kind-kind
    ```
-3. Create the Kubernetes resources:
+4. Create the Kubernetes resources:
     ```bash
    cd terraform-infra
    terraform init
@@ -93,11 +100,11 @@ Here is a visual representation of the architecture:
    ```bash
    ./restartClusterTerraform.ps1
    ```
-4. That's it! Now you should be able to run:
+5. That's it! Now you should be able to run:
     ```bash
    kubectl get all -o wide
    ```
-5. After you're done, run the following commands to delete the resources and cluster:
+6. After you're done, run the following commands to delete the resources and cluster:
     ```bash
     cd terraform-infra
     terraform destroy

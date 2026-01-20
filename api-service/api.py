@@ -202,6 +202,23 @@ def delete_movie():
                 "error": "Unable to connect to auth service",
                 "details": str(e)
             }
+            ), 500
+
+@app.route('/api/all-movies', methods=['GET'])
+def get_all_movies():
+    """
+    Get all movies from the master catalogue.
+    Public endpoint - no authentication required.
+    """
+    try:
+        response = requests.get(f"{AUTH_SERVICE_URL}/auth/all-movies", timeout=5)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
         ), 500
 
 if __name__ == '__main__':

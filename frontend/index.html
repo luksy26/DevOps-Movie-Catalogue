@@ -249,6 +249,80 @@
             color: #667eea;
             margin: 20px 0;
         }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+
+        .tab-btn:hover {
+            border-color: #667eea;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .add-tab {
+            animation: fadeIn 0.3s;
+        }
+
+        .catalogue-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .catalogue-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .catalogue-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .catalogue-item-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .catalogue-item-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .btn-add-from-catalogue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: transform 0.2s;
+        }
+
+        .btn-add-from-catalogue:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -303,18 +377,41 @@
                 <h3 style="margin-bottom: 15px;">Add New Movie</h3>
                 <div id="addMovieError" class="error-message hidden"></div>
                 <div id="addMovieSuccess" class="success-message hidden"></div>
-                <div class="form-row">
-                    <div class="form-group" style="margin: 0;">
-                        <input type="text" id="movieName" placeholder="Movie name">
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <input type="text" id="movieGenre" placeholder="Genre">
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <input type="number" id="movieYear" placeholder="Year">
-                    </div>
+                
+                <!-- Tab buttons -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button class="tab-btn active" onclick="showAddTab('browse')" id="browseTab">
+                        📚 Browse Catalogue
+                    </button>
+                    <button class="tab-btn" onclick="showAddTab('manual')" id="manualTab">
+                        ✍️ Manual Entry
+                    </button>
                 </div>
-                <button class="btn" onclick="addMovie()">Add Movie</button>
+
+                <!-- Browse Catalogue Tab -->
+                <div id="browseCatalogueTab" class="add-tab active">
+                    <div id="catalogueLoading" class="loading hidden">Loading catalogue...</div>
+                    <div id="catalogueEmpty" class="hidden" style="text-align: center; padding: 20px; color: #666;">
+                        No movies in catalogue yet. Use manual entry to add your own!
+                    </div>
+                    <div id="catalogueList" class="catalogue-list"></div>
+                </div>
+
+                <!-- Manual Entry Tab -->
+                <div id="manualEntryTab" class="add-tab" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group" style="margin: 0;">
+                            <input type="text" id="movieName" placeholder="Movie name">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <input type="text" id="movieGenre" placeholder="Genre">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <input type="number" id="movieYear" placeholder="Year">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="addMovie()">Add Movie</button>
+                </div>
             </div>
 
             <h3 style="margin-bottom: 15px;">Your Movies</h3>
@@ -393,6 +490,28 @@
             document.getElementById('currentUser').textContent = currentUsername;
             localStorage.setItem('currentView', 'movies');
             loadMovies();
+            loadCatalogue();
+        }
+
+        // Switch between add movie tabs
+        function showAddTab(tab) {
+            const browseTab = document.getElementById('browseCatalogueTab');
+            const manualTab = document.getElementById('manualEntryTab');
+            const browseBtn = document.getElementById('browseTab');
+            const manualBtn = document.getElementById('manualTab');
+
+            if (tab === 'browse') {
+                browseTab.style.display = 'block';
+                manualTab.style.display = 'none';
+                browseBtn.classList.add('active');
+                manualBtn.classList.remove('active');
+                loadCatalogue();
+            } else {
+                browseTab.style.display = 'none';
+                manualTab.style.display = 'block';
+                browseBtn.classList.remove('active');
+                manualBtn.classList.add('active');
+            }
         }
 
         function clearMessages() {
@@ -532,6 +651,86 @@
             } catch (error) {
                 loadingEl.classList.add('hidden');
                 moviesListEl.innerHTML = '<p style="text-align: center; color: #c33;">Error loading movies</p>';
+            }
+        }
+
+        // Load catalogue
+        async function loadCatalogue() {
+            const catalogueListEl = document.getElementById('catalogueList');
+            const loadingEl = document.getElementById('catalogueLoading');
+            const emptyEl = document.getElementById('catalogueEmpty');
+
+            loadingEl.classList.remove('hidden');
+            catalogueListEl.innerHTML = '';
+            emptyEl.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/all-movies`);
+                const data = await response.json();
+                loadingEl.classList.add('hidden');
+
+                if (data.movies && data.movies.length > 0) {
+                    catalogueListEl.innerHTML = data.movies.map(movie => `
+                        <div class="catalogue-item">
+                            <div class="catalogue-item-info">
+                                <h4>${movie.name}</h4>
+                                <p><strong>Genre:</strong> ${movie.genre} | <strong>Year:</strong> ${movie.year}</p>
+                            </div>
+                            <button class="btn-add-from-catalogue" onclick='addMovieFromCatalogue(${JSON.stringify(movie)})'>
+                                + Add to My List
+                            </button>
+                        </div>
+                    `).join('');
+                } else {
+                    emptyEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                loadingEl.classList.add('hidden');
+                catalogueListEl.innerHTML = '<p style="text-align: center; color: #c33;">Error loading catalogue</p>';
+            }
+        }
+
+        // Add movie from catalogue
+        async function addMovieFromCatalogue(movie) {
+            const errorEl = document.getElementById('addMovieError');
+            const successEl = document.getElementById('addMovieSuccess');
+
+            clearMessages();
+
+            try {
+                const response = await fetch(`${API_BASE}/movies`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authToken
+                    },
+                    body: JSON.stringify({
+                        name: movie.name,
+                        genre: movie.genre,
+                        year: movie.year
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    logout();
+                    return;
+                }
+
+                if (response.ok) {
+                    successEl.textContent = `"${movie.name}" added to your list!`;
+                    successEl.classList.remove('hidden');
+                    loadMovies();
+                    setTimeout(() => successEl.classList.add('hidden'), 3000);
+                } else {
+                    errorEl.textContent = data.error || 'Failed to add movie';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.classList.remove('hidden');
             }
         }
 

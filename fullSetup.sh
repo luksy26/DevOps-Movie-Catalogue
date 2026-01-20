@@ -20,8 +20,51 @@ echo ""
 echo "========================================="
 echo ""
 
-# Step 2: Deploy all manifests
-echo "Step 2: Deploying Kubernetes manifests..."
+# Step 2: Rebuild Docker images
+echo "Step 2: Rebuilding Docker images..."
+echo ""
+
+echo "Building API service..."
+cd api-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild API service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
+echo "Building Auth service..."
+cd auth-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Auth service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
+echo "Building Catalogue service..."
+cd catalogue-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Catalogue service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
+echo "✅ All Docker images rebuilt successfully"
+
+echo ""
+echo "========================================="
+echo ""
+
+# Step 3: Deploy all manifests
+echo "Step 3: Deploying Kubernetes manifests..."
 ./deployManifests.sh
 
 if [ $? -ne 0 ]; then
@@ -33,8 +76,8 @@ echo ""
 echo "========================================="
 echo ""
 
-# Step 3: Update service IPs
-echo "Step 3: Updating service IPs in deployments..."
+# Step 4: Update service IPs
+echo "Step 4: Updating service IPs in deployments..."
 ./updateServiceIPs.sh
 
 if [ $? -ne 0 ]; then
