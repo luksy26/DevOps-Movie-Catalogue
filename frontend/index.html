@@ -699,6 +699,10 @@
                 <input type="text" id="registerUsername" placeholder="Choose a username">
             </div>
             <div class="form-group">
+                <label for="registerEmail">Email (optional - for movie notifications)</label>
+                <input type="email" id="registerEmail" placeholder="your.email@example.com">
+            </div>
+            <div class="form-group">
                 <label for="registerPassword">Password</label>
                 <input type="password" id="registerPassword" placeholder="Choose a password">
             </div>
@@ -1079,6 +1083,7 @@
         // Register
         async function register() {
             const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
             const errorEl = document.getElementById('registerError');
             const successEl = document.getElementById('registerSuccess');
@@ -1086,24 +1091,32 @@
             clearMessages();
 
             if (!username || !password) {
-                errorEl.textContent = 'Please fill in all fields';
+                errorEl.textContent = 'Please fill in username and password';
                 errorEl.classList.remove('hidden');
                 return;
+            }
+
+            // Build request body
+            const requestBody = { username, password };
+            if (email && email.trim() !== '') {
+                requestBody.email = email;
             }
 
             try {
                 const response = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    successEl.textContent = `Account created successfully! You can now login.`;
+                    const emailMsg = email ? ' Check your email for movie notifications!' : '';
+                    successEl.textContent = `Account created successfully!${emailMsg} You can now login.`;
                     successEl.classList.remove('hidden');
                     document.getElementById('registerUsername').value = '';
+                    document.getElementById('registerEmail').value = '';
                     document.getElementById('registerPassword').value = '';
                 } else {
                     errorEl.textContent = data.error || 'Registration failed';

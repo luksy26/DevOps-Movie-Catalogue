@@ -79,6 +79,17 @@ fi
 cd ..
 
 echo ""
+echo "Building Notification service..."
+cd notification-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Notification service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
 echo "✅ All Docker images rebuilt successfully"
 
 echo ""

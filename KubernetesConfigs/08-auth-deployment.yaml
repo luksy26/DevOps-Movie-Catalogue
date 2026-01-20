@@ -33,14 +33,14 @@ spec:
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
-              value: "10.96.176.77" # PGHOSTADDR
+              value: "10.96.120.128" # PGHOSTADDR
             - name: PGPORT
               value: "5432"
             - name: CATALOGUE_SERVICE_URL
-              value: "http://10.96.76.174:8091" # CATALOGUE_SERVICE_URL
+              value: "http://10.96.48.180:8091" # CATALOGUE_SERVICE_URL
             - name: RECOMMENDATION_SERVICE_URL
-              value: "http://10.96.165.173:8092" # RECOMMENDATION_SERVICE_URL
+              value: "http://10.96.44.239:8092" # RECOMMENDATION_SERVICE_URL
             - name: REVIEW_SERVICE_URL
-              value: "http://10.96.117.58:8093" # REVIEW_SERVICE_URL
+              value: "http://10.96.239.130:8093" # REVIEW_SERVICE_URL
             - name: NOTIFICATION_SERVICE_URL
-              value: "http://10.96.251.220:8094" # NOTIFICATION_SERVICE_URL
+              value: "http://10.96.146.248:8094" # NOTIFICATION_SERVICE_URL

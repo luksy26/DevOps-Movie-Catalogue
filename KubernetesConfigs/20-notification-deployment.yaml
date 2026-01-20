@@ -31,7 +31,7 @@ spec:
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
-              value: "10.96.176.77" # PGHOSTADDR
+              value: "10.96.120.128" # PGHOSTADDR
             - name: PGPORT
               value: "5432"
             - name: TMDB_API_TOKEN
