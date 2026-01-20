@@ -43,7 +43,7 @@ def get_db_connection():
 
 # Function to initialize reviews table
 def initialize_table():
-    conn, _ = get_db_connection()
+    conn, error_info = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
@@ -65,9 +65,15 @@ def initialize_table():
 
             conn.commit()  # Save changes
             cur.close()
+            logging.info("✅ Reviews table initialized successfully")
             return True
+        except Exception as e:
+            logging.error(f"❌ Error initializing reviews table: {e}")
+            return False
         finally:
             conn.close()
+    else:
+        logging.error(f"❌ Database connection failed: {error_info}")
     return False
 
 # Route to test the database connection
@@ -236,8 +242,18 @@ def get_movie_reviews(movie_id):
     return jsonify(error_info), 500
 
 if __name__ == '__main__':
-    logging.debug("Trying to initialize 'reviews' table in database...")
-    while not initialize_table():
-        pass
-    logging.debug("'reviews' table created in database.")
+    import time
+    logging.info("🔄 Trying to initialize 'reviews' table in database...")
+    max_retries = 30
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        if initialize_table():
+            logging.info("✅ Reviews table created in database.")
+            break
+        logging.warning(f"⚠️  Database not ready, retrying... (attempt {attempt + 1}/{max_retries})")
+        time.sleep(retry_delay)
+    else:
+        logging.error("❌ Failed to initialize database after maximum retries. Starting app anyway...")
+    
     app.run(debug=True, host='0.0.0.0', port=8093)
