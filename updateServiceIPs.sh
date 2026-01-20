@@ -26,14 +26,31 @@ echo "Updating api-deployment.yaml..."
 sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/06-api-deployment.yaml
 sed -i '' "s|value: \"http://[0-9.]*:8090\" # AUTH_SERVICE_URL|value: \"http://$AUTH_IP:8090\" # AUTH_SERVICE_URL|" KubernetesConfigs/06-api-deployment.yaml
 
-# Update Auth deployment (needs Catalogue IP and Postgres IP)
+# Get Recommendation and Review service IPs
+RECOMMENDATION_IP=$(kubectl get service recommendation-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "10.96.0.1")
+REVIEW_IP=$(kubectl get service review-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "10.96.0.1")
+echo "  Recommendation: $RECOMMENDATION_IP"
+echo "  Review:         $REVIEW_IP"
+echo ""
+
+# Update Auth deployment (needs Catalogue, Recommendation, Review IPs and Postgres IP)
 echo "Updating auth-deployment.yaml..."
 sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/08-auth-deployment.yaml
 sed -i '' "s|value: \"http://[0-9.]*:8091\" # CATALOGUE_SERVICE_URL|value: \"http://$CATALOGUE_IP:8091\" # CATALOGUE_SERVICE_URL|" KubernetesConfigs/08-auth-deployment.yaml
+sed -i '' "s|value: \"http://[0-9.]*:8092\" # RECOMMENDATION_SERVICE_URL|value: \"http://$RECOMMENDATION_IP:8092\" # RECOMMENDATION_SERVICE_URL|" KubernetesConfigs/08-auth-deployment.yaml
+sed -i '' "s|value: \"http://[0-9.]*:8093\" # REVIEW_SERVICE_URL|value: \"http://$REVIEW_IP:8093\" # REVIEW_SERVICE_URL|" KubernetesConfigs/08-auth-deployment.yaml
 
 # Update Catalogue deployment (needs Postgres IP)
 echo "Updating catalogue-deployment.yaml..."
 sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/10-catalogue-deployment.yaml
+
+# Update Recommendation deployment (needs Postgres IP)
+echo "Updating recommendation-deployment.yaml..."
+sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/16-recommendation-deployment.yaml
+
+# Update Review deployment (needs Postgres IP)
+echo "Updating review-deployment.yaml..."
+sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/18-review-deployment.yaml
 
 echo ""
 echo "✅ Service IPs updated in deployment files!"

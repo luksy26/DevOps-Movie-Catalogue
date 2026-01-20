@@ -39,6 +39,8 @@ echo "Step 3: Scaling down deployments..."
 kubectl scale deployment api-deployment --replicas=0
 kubectl scale deployment auth-deployment --replicas=0
 kubectl scale deployment catalogue-deployment --replicas=0
+kubectl scale deployment recommendation-deployment --replicas=0 2>/dev/null || echo "Recommendation deployment not found (skipping)"
+kubectl scale deployment review-deployment --replicas=0 2>/dev/null || echo "Review deployment not found (skipping)"
 
 echo "Waiting for pods to terminate..."
 sleep 5
@@ -48,6 +50,8 @@ echo "Step 4: Scaling up deployments..."
 kubectl scale deployment api-deployment --replicas=1
 kubectl scale deployment auth-deployment --replicas=1
 kubectl scale deployment catalogue-deployment --replicas=1
+kubectl scale deployment recommendation-deployment --replicas=1 2>/dev/null || echo "Recommendation deployment not found (skipping)"
+kubectl scale deployment review-deployment --replicas=1 2>/dev/null || echo "Review deployment not found (skipping)"
 
 echo ""
 echo "Step 5: Waiting for new pods to start..."

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: review
+  ports:
+    - protocol: TCP
+      port: 8093
+      targetPort: 8093

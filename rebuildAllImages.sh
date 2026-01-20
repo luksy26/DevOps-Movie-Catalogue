@@ -34,7 +34,7 @@ cd ..
 echo ""
 
 # Catalogue Service
-echo "Step 3/3: Building Catalogue service..."
+echo "Step 3/5: Building Catalogue service..."
 cd catalogue-service
 ./rebuildImage.sh
 if [ $? -ne 0 ]; then
@@ -45,8 +45,34 @@ fi
 cd ..
 
 echo ""
+
+# Recommendation Service
+echo "Step 4/5: Building Recommendation service..."
+cd recommendation-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Recommendation service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
+
+# Review Service
+echo "Step 5/5: Building Review service..."
+cd review-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Review service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
 echo "========================================="
-echo "  ✅ All Images Rebuilt Successfully!"
+echo "  ✅ All 5 Images Rebuilt Successfully!"
 echo "========================================="
 echo ""
 echo "Next steps:"
@@ -54,6 +80,8 @@ echo "  1. Restart the deployments to pull the new images:"
 echo "     kubectl rollout restart deployment api-deployment"
 echo "     kubectl rollout restart deployment auth-deployment"
 echo "     kubectl rollout restart deployment catalogue-deployment"
+echo "     kubectl rollout restart deployment recommendation-deployment"
+echo "     kubectl rollout restart deployment review-deployment"
 echo ""
 echo "  2. Or run: ./restartDeployments.sh"
 echo ""

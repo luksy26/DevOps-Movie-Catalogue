@@ -16,10 +16,18 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Catalogue Service URL
+# Service URLs
 CATALOGUE_SERVICE_URL = os.environ.get(
     "CATALOGUE_SERVICE_URL",
     "http://catalogue:8091"
+    )
+RECOMMENDATION_SERVICE_URL = os.environ.get(
+    "RECOMMENDATION_SERVICE_URL",
+    "http://recommendation-service:8092"
+    )
+REVIEW_SERVICE_URL = os.environ.get(
+    "REVIEW_SERVICE_URL",
+    "http://review-service:8093"
     )
 
 # Database configuration (read from environment variables)
@@ -394,16 +402,16 @@ def get_recommendations():
     
     try:
         response = requests.post(
-            f"{CATALOGUE_SERVICE_URL}/catalogue/recommendations",
+            f"{RECOMMENDATION_SERVICE_URL}/recommendations",
             json=data,
             timeout=5
         )
-        logging.debug("Response from catalogue/recommendations: " + response.text)
+        logging.debug("Response from recommendation service: " + response.text)
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify(
             {
-                "error": "Unable to connect to catalogue service",
+                "error": "Unable to connect to recommendation service",
                 "details": str(e)
             }
         ), 500
@@ -426,9 +434,9 @@ def submit_review():
         data = request.get_json()
         data['user_id'] = user_id
 
-        # Forward to catalogue service
+        # Forward to review service
         response = requests.post(
-            f"{CATALOGUE_SERVICE_URL}/catalogue/reviews",
+            f"{REVIEW_SERVICE_URL}/reviews",
             json=data,
             timeout=5
         )
@@ -441,7 +449,7 @@ def submit_review():
     except requests.exceptions.RequestException as e:
         return jsonify(
             {
-                "error": "Unable to connect to catalogue service",
+                "error": "Unable to connect to review service",
                 "details": str(e)
             }
         ), 500
@@ -453,14 +461,14 @@ def get_movie_reviews(movie_id):
     """
     try:
         response = requests.get(
-            f"{CATALOGUE_SERVICE_URL}/catalogue/reviews/{movie_id}",
+            f"{REVIEW_SERVICE_URL}/reviews/{movie_id}",
             timeout=5
         )
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
         return jsonify(
             {
-                "error": "Unable to connect to catalogue service",
+                "error": "Unable to connect to review service",
                 "details": str(e)
             }
         ), 500

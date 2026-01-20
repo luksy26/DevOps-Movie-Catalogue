@@ -104,21 +104,6 @@ def initialize_table():
                 """
             )
 
-            # Create `reviews` table
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS reviews (
-                    id SERIAL PRIMARY KEY,
-                    movie_id INT NOT NULL REFERENCES allMovies(id) ON DELETE CASCADE,
-                    user_id INT NOT NULL,
-                    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
-                    review_text TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(movie_id, user_id)
-                )
-                """
-            )
-
             conn.commit()  # Save changes
             cur.close()
             return True
@@ -236,7 +221,8 @@ def populate_movies_from_tmdb():
 def test_db_connection():
     conn, error_info = get_db_connection()
     if conn:
-        return jsonify({"message": "Database connected."}), 200
+        conn.close()
+        return jsonify({"message": "Catalogue service: Database connected."}), 200
     # If connection failed, return debug info
     return jsonify(error_info), 500
 
@@ -479,238 +465,11 @@ def get_all_movies():
 
     return jsonify(error_info), 500
 
-# Get movie recommendations based on genres
-@app.route('/catalogue/recommendations', methods=['POST'])
-def get_recommendations():
-    """
-    Get movie recommendations based on selected genres and popularity
-    Input: { "genres": ["Action", "Comedy", "Drama"] }
-    Output: List of movies from those genres, sorted by popularity
-    """
-    data = request.get_json()
-    genres = data.get('genres', [])
-    limit = data.get('limit', 20)  # Default to top 20 recommendations
-
-    if not genres or not isinstance(genres, list):
-        return jsonify(
-            {
-                "error": "Genres array is required"
-            }
-        ), 400
-
-    conn, error_info = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-
-            # Build query to get movies matching any of the selected genres
-            # Use parameterized query to prevent SQL injection
-            placeholders = ', '.join(['%s'] * len(genres))
-            query = f"""
-                SELECT id, name, genre, year, popularity, avg_rating, review_count
-                FROM allMovies
-                WHERE genre IN ({placeholders})
-                ORDER BY popularity DESC
-                LIMIT %s
-            """
-            
-            cur.execute(query, (*genres, limit))
-            movies = cur.fetchall()
-            
-            logging.info(f"Found {len(movies)} recommendations for genres: {genres}")
-
-            if not movies:
-                return jsonify(
-                    {
-                        "message": "No recommendations found for selected genres",
-                        "recommendations": []
-                    }
-                ), 200
-
-            # Format the movie list
-            recommendations = [
-                {
-                    "id": movie[0],
-                    "name": movie[1], 
-                    "genre": movie[2], 
-                    "year": movie[3],
-                    "popularity": movie[4],
-                    "avg_rating": round(movie[5], 1) if movie[5] else 0.0,
-                    "review_count": movie[6] or 0
-                } 
-                for movie in movies
-            ]
-
-            cur.close()
-            return jsonify({"recommendations": recommendations}), 200
-            
-        except psycopg2.Error as e:
-            return jsonify({"error": f"Error fetching recommendations: {str(e)}"}), 500
-        finally:
-            conn.close()
-
-    return jsonify(error_info), 500
-
-# Submit or update a movie review
-@app.route('/catalogue/reviews', methods=['POST'])
-def submit_review():
-    """
-    Submit or update a review for a movie
-    Input: { "movie_id": 123, "user_id": 456, "rating": 4, "review_text": "Great movie!" }
-    """
-    data = request.get_json()
-    movie_id = data.get('movie_id')
-    user_id = data.get('user_id')
-    rating = data.get('rating')
-    review_text = data.get('review_text', '')
-
-    # Validation
-    if not movie_id or not user_id or not rating:
-        return jsonify({"error": "movie_id, user_id, and rating are required"}), 400
-    
-    if not isinstance(rating, int) or rating < 1 or rating > 5:
-        return jsonify({"error": "Rating must be an integer between 1 and 5"}), 400
-
-    conn, error_info = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-
-            # Check if movie exists
-            cur.execute("SELECT id FROM allMovies WHERE id = %s", (movie_id,))
-            if not cur.fetchone():
-                cur.close()
-                conn.close()
-                return jsonify({"error": "Movie not found"}), 404
-
-            # Insert or update review (UPSERT)
-            cur.execute(
-                """
-                INSERT INTO reviews (movie_id, user_id, rating, review_text)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (movie_id, user_id)
-                DO UPDATE SET
-                    rating = EXCLUDED.rating,
-                    review_text = EXCLUDED.review_text,
-                    created_at = CURRENT_TIMESTAMP
-                RETURNING id
-                """,
-                (movie_id, user_id, rating, review_text)
-            )
-            
-            review_id = cur.fetchone()[0]
-
-            # Recalculate average rating for the movie
-            cur.execute(
-                """
-                SELECT AVG(rating)::FLOAT, COUNT(*)
-                FROM reviews
-                WHERE movie_id = %s
-                """,
-                (movie_id,)
-            )
-            avg_rating, review_count = cur.fetchone()
-
-            # Update movie's average rating
-            cur.execute(
-                """
-                UPDATE allMovies
-                SET avg_rating = %s, review_count = %s
-                WHERE id = %s
-                """,
-                (avg_rating or 0.0, review_count or 0, movie_id)
-            )
-
-            conn.commit()
-            cur.close()
-
-            return jsonify({
-                "message": "Review submitted successfully",
-                "review_id": review_id,
-                "new_avg_rating": round(avg_rating, 2) if avg_rating else 0.0,
-                "total_reviews": review_count
-            }), 201
-
-        except psycopg2.Error as e:
-            return jsonify({"error": f"Database error: {str(e)}"}), 500
-        finally:
-            conn.close()
-
-    return jsonify(error_info), 500
-
-# Get reviews for a movie
-@app.route('/catalogue/reviews/<int:movie_id>', methods=['GET'])
-def get_movie_reviews(movie_id):
-    """
-    Get all reviews for a specific movie
-    """
-    conn, error_info = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-
-            # Get movie info with rating
-            cur.execute(
-                """
-                SELECT id, name, avg_rating, review_count
-                FROM allMovies
-                WHERE id = %s
-                """,
-                (movie_id,)
-            )
-            movie = cur.fetchone()
-
-            if not movie:
-                cur.close()
-                conn.close()
-                return jsonify({"error": "Movie not found"}), 404
-
-            # Get all reviews for this movie
-            cur.execute(
-                """
-                SELECT id, user_id, rating, review_text, created_at
-                FROM reviews
-                WHERE movie_id = %s
-                ORDER BY created_at DESC
-                """,
-                (movie_id,)
-            )
-            reviews = cur.fetchall()
-
-            review_list = [
-                {
-                    "id": review[0],
-                    "user_id": review[1],
-                    "rating": review[2],
-                    "review_text": review[3],
-                    "created_at": review[4].isoformat() if review[4] else None
-                }
-                for review in reviews
-            ]
-
-            cur.close()
-            return jsonify({
-                "movie": {
-                    "id": movie[0],
-                    "name": movie[1],
-                    "avg_rating": round(movie[2], 2) if movie[2] else 0.0,
-                    "review_count": movie[3]
-                },
-                "reviews": review_list
-            }), 200
-
-        except psycopg2.Error as e:
-            return jsonify({"error": f"Database error: {str(e)}"}), 500
-        finally:
-            conn.close()
-
-    return jsonify(error_info), 500
-
 if __name__ == '__main__':
-    logging.debug("Trying to initialize 'userMovies', 'allMovies', and 'reviews' tables in database...")
+    logging.debug("Trying to initialize 'userMovies' and 'allMovies' tables in database...")
     while not initialize_table():
         pass
-    logging.debug("'userMovies', 'allMovies', and 'reviews' tables created in database.")
+    logging.debug("'userMovies' and 'allMovies' tables created in database.")
     
     # Populate allMovies from TMDB API
     logging.info("Checking if allMovies table needs to be populated...")

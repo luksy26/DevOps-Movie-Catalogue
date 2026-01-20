@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalogue-deployment
+  name: review-deployment
   namespace: default
   labels:
-    app: catalogue
+    app: review
 spec:
-  replicas: 1  # Number of replicas you want for your catalogue container
+  replicas: 1
   selector:
     matchLabels:
-      app: catalogue  # Match the label of the pod to ensure the deployment controls the pods
+      app: review
   template:
     metadata:
       labels:
-        app: catalogue
+        app: review
     spec:
       containers:
-        - name: catalogue-service-container
-          image: lucaslazaroiu/ccproject:catalogue-service
+        - name: review-service-container
+          image: lucaslazaroiu/ccproject:review-service
           imagePullPolicy: Always
           ports:
-            - containerPort: 8091
+            - containerPort: 8093
           env:
             - name: PGUSER
               value: "admin"
@@ -28,16 +28,9 @@ spec:
               value: "admin"
             - name: PGDATABASE
               value: "movieApp"
-            - name: PGDATATABLE
-              value: "movies"
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
               value: "10.96.69.173" # PGHOSTADDR
             - name: PGPORT
               value: "5432"
-            - name: TMDB_API_TOKEN
-              valueFrom:
-                configMapKeyRef:
-                  name: db-config-map
-                  key: TMDB_API_TOKEN

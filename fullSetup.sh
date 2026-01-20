@@ -57,6 +57,28 @@ fi
 cd ..
 
 echo ""
+echo "Building Recommendation service..."
+cd recommendation-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Recommendation service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
+echo "Building Review service..."
+cd review-service
+./rebuildImage.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to rebuild Review service image"
+    cd ..
+    exit 1
+fi
+cd ..
+
+echo ""
 echo "✅ All Docker images rebuilt successfully"
 
 echo ""
