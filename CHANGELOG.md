@@ -2,6 +2,56 @@
 
 ## Recent Updates
 
+### Performance Optimization - Catalogue Loading
+
+**Fixed**: Catalogue now loads only once instead of on every tab click.
+
+#### Changes:
+
+**Frontend**:
+- Added `catalogueLoaded` flag to track if catalogue has been fetched
+- Catalogue API call now only happens:
+  - On first click to "Browse Catalogue" tab
+  - When user manually clicks refresh button (🔄)
+  - After logout/login (state resets)
+- Added manual refresh button (🔄) in catalogue header for users who want to reload
+- Improved performance by eliminating redundant API calls
+
+**Benefits**:
+- ✅ Faster tab switching (no loading delay)
+- ✅ Reduced server load
+- ✅ Better user experience
+- ✅ Manual refresh option still available
+
+---
+
+### Duplicate Movie Prevention
+
+**Added**: Logic to prevent users from adding the same movie twice to their list.
+
+#### Changes:
+
+**Catalogue Service**:
+- Added duplicate check before insertion in `add_movie()` endpoint
+- Queries `userMovies` table to check if movie (by name and year) already exists for the user
+- Returns `409 Conflict` status with descriptive error message if duplicate found
+
+**Auth Service**:
+- Added handling for `409` status code from catalogue service
+- Passes through the duplicate error message to API layer
+
+**API Service**:
+- Added handling for `409` status code from auth service
+- Returns clear error message to frontend
+
+**Frontend**:
+- Added special handling for `409` status code
+- Shows user-friendly error message: "This movie is already in your list"
+- Auto-dismisses duplicate error after 3 seconds
+- Works for both manual entry and catalogue browsing
+
+---
+
 ### Browse Catalogue Feature + TMDB Integration
 
 #### Database Changes

@@ -307,6 +307,25 @@ def add_movie():
         try:
             cur = conn.cursor()
 
+            # Check if movie already exists in user's list
+            cur.execute(
+                """
+                SELECT id FROM userMovies
+                WHERE user_id = %s AND name = %s AND year = %s
+                """,
+                (user_id, name, year)
+            )
+            existing_movie = cur.fetchone()
+
+            if existing_movie:
+                cur.close()
+                conn.close()
+                return jsonify(
+                    {
+                        "error": f"Movie '{name}' ({year}) already exists in your list"
+                    }
+                ), 409  # 409 Conflict status code
+
             # Insert new movie for the user_id
             cur.execute(
                 """

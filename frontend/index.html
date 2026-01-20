@@ -390,6 +390,12 @@
 
                 <!-- Browse Catalogue Tab -->
                 <div id="browseCatalogueTab" class="add-tab active">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="color: #666; font-size: 0.9em;">Browse movies from the catalogue</span>
+                        <button onclick="loadCatalogue(true)" style="background: none; border: none; cursor: pointer; color: #667eea; font-size: 1.2em; padding: 5px 10px;" title="Refresh catalogue">
+                            🔄
+                        </button>
+                    </div>
                     <div id="catalogueLoading" class="loading hidden">Loading catalogue...</div>
                     <div id="catalogueEmpty" class="hidden" style="text-align: center; padding: 20px; color: #666;">
                         No movies in catalogue yet. Use manual entry to add your own!
@@ -424,6 +430,7 @@
         const API_BASE = 'http://localhost:30000/api';
         let authToken = null;
         let currentUsername = null;
+        let catalogueLoaded = false;  // Track if catalogue has been loaded
 
         // Load auth state from localStorage
         function loadAuthState() {
@@ -505,7 +512,10 @@
                 manualTab.style.display = 'none';
                 browseBtn.classList.add('active');
                 manualBtn.classList.remove('active');
-                loadCatalogue();
+                // Only load catalogue if it hasn't been loaded yet
+                if (!catalogueLoaded) {
+                    loadCatalogue();
+                }
             } else {
                 browseTab.style.display = 'none';
                 manualTab.style.display = 'block';
@@ -601,6 +611,7 @@
         function logout() {
             authToken = null;
             currentUsername = null;
+            catalogueLoaded = false;  // Reset catalogue state on logout
             clearAuthState();
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
@@ -655,10 +666,15 @@
         }
 
         // Load catalogue
-        async function loadCatalogue() {
+        async function loadCatalogue(forceRefresh = false) {
             const catalogueListEl = document.getElementById('catalogueList');
             const loadingEl = document.getElementById('catalogueLoading');
             const emptyEl = document.getElementById('catalogueEmpty');
+
+            // Skip if already loaded and not forcing refresh
+            if (catalogueLoaded && !forceRefresh) {
+                return;
+            }
 
             loadingEl.classList.remove('hidden');
             catalogueListEl.innerHTML = '';
@@ -681,8 +697,10 @@
                             </button>
                         </div>
                     `).join('');
+                    catalogueLoaded = true;  // Mark as loaded
                 } else {
                     emptyEl.classList.remove('hidden');
+                    catalogueLoaded = true;  // Mark as loaded even if empty
                 }
             } catch (error) {
                 loadingEl.classList.add('hidden');
@@ -724,6 +742,11 @@
                     successEl.classList.remove('hidden');
                     loadMovies();
                     setTimeout(() => successEl.classList.add('hidden'), 3000);
+                } else if (response.status === 409) {
+                    // Duplicate movie
+                    errorEl.textContent = data.error || 'This movie is already in your list';
+                    errorEl.classList.remove('hidden');
+                    setTimeout(() => errorEl.classList.add('hidden'), 3000);
                 } else {
                     errorEl.textContent = data.error || 'Failed to add movie';
                     errorEl.classList.remove('hidden');
@@ -776,6 +799,11 @@
                     document.getElementById('movieYear').value = '';
                     loadMovies();
                     setTimeout(() => successEl.classList.add('hidden'), 3000);
+                } else if (response.status === 409) {
+                    // Duplicate movie
+                    errorEl.textContent = data.error || 'This movie is already in your list';
+                    errorEl.classList.remove('hidden');
+                    setTimeout(() => errorEl.classList.add('hidden'), 3000);
                 } else {
                     errorEl.textContent = data.error || 'Failed to add movie';
                     errorEl.classList.remove('hidden');

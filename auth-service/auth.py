@@ -269,6 +269,8 @@ def add_movie():
         # Return the response from the catalogue service
         if response.status_code == 201:  # If successful
             return jsonify(response.json()), 201
+        elif response.status_code == 409:  # Duplicate movie
+            return jsonify(response.json()), 409
         else:
             return jsonify(
                 {

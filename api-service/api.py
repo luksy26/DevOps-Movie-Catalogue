@@ -162,6 +162,9 @@ def post_movie():
                     "Added movie": response.json()
                  }
                 ), response.status_code
+        elif response.status_code == 409:
+            # Duplicate movie - pass through the error message
+            return jsonify(response.json()), 409
         else:
             return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
