@@ -393,6 +393,146 @@
             margin-left: 10px;
             font-weight: 500;
         }
+
+        .rating-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #f39c12;
+            font-weight: 600;
+        }
+
+        .stars {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .star {
+            font-size: 1.2em;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .star-rating .star {
+            font-size: 1.5em;
+            color: #ddd;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        .star-rating .star.filled {
+            color: #f39c12;
+        }
+
+        .star-rating .star:hover,
+        .star-rating .star:hover ~ .star {
+            color: #f39c12;
+        }
+
+        .review-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .review-modal.active {
+            display: flex;
+        }
+
+        .review-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .review-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .review-modal-header h3 {
+            color: #333;
+            margin: 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .review-form textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1em;
+            resize: vertical;
+        }
+
+        .review-form textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-review {
+            background: #f39c12;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+
+        .btn-review:hover {
+            background: #e67e22;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -517,12 +657,42 @@
         </div>
     </div>
 
+    <!-- Review Modal -->
+    <div id="reviewModal" class="review-modal">
+        <div class="review-modal-content">
+            <div class="review-modal-header">
+                <h3>Rate & Review</h3>
+                <button class="close-modal" onclick="closeReviewModal()">×</button>
+            </div>
+            <div id="reviewMovieInfo" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <!-- Movie info will be inserted here -->
+            </div>
+            <div class="review-form">
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Your Rating:</label>
+                <div class="star-rating" id="starRating">
+                    <span class="star" data-rating="1">★</span>
+                    <span class="star" data-rating="2">★</span>
+                    <span class="star" data-rating="3">★</span>
+                    <span class="star" data-rating="4">★</span>
+                    <span class="star" data-rating="5">★</span>
+                </div>
+                <label style="display: block; margin-top: 20px; margin-bottom: 10px; font-weight: 500;">Your Review (optional):</label>
+                <textarea id="reviewText" placeholder="Share your thoughts about this movie..."></textarea>
+                <div id="reviewSubmitError" class="error-message hidden" style="margin-top: 15px;"></div>
+                <div id="reviewSubmitSuccess" class="success-message hidden" style="margin-top: 15px;"></div>
+                <button class="btn" onclick="submitReview()" style="margin-top: 15px; width: 100%;">Submit Review</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'http://localhost:30000/api';
         let authToken = null;
         let currentUsername = null;
         let catalogueLoaded = false;  // Track if catalogue has been loaded
         let selectedGenres = [];  // Track selected genres for recommendations
+        let currentReviewMovie = null;  // Track movie being reviewed
+        let selectedRating = 0;  // Track selected rating
         
         // Available genres (matching GENRE_MAP in backend)
         const AVAILABLE_GENRES = [
@@ -791,16 +961,22 @@
                             <div class="recommendation-info">
                                 <h4>
                                     ${movie.name}
-                                    <span class="popularity-badge">⭐ ${movie.popularity.toFixed(1)}</span>
+                                    <span class="popularity-badge">🔥 ${movie.popularity.toFixed(1)}</span>
                                 </h4>
                                 <p>
                                     <strong>Genre:</strong> ${movie.genre} | 
                                     <strong>Year:</strong> ${movie.year}
                                 </p>
+                                ${movie.avg_rating > 0 ? `<p style="margin-top: 8px;">${generateStars(movie.avg_rating, movie.review_count)}</p>` : '<p style="margin-top: 8px; color: #999;">No ratings yet</p>'}
                             </div>
-                            <button class="btn-add-from-catalogue" onclick='addMovieFromCatalogue(${JSON.stringify(movie)}, true)'>
-                                + Add to My List
-                            </button>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button class="btn-review" onclick='openReviewModal(${JSON.stringify(movie)})'>
+                                    ⭐ Rate
+                                </button>
+                                <button class="btn-add-from-catalogue" onclick='addMovieFromCatalogue(${JSON.stringify(movie)}, true)'>
+                                    + Add
+                                </button>
+                            </div>
                         </div>
                     `).join('');
                 } else {
@@ -886,10 +1062,16 @@
                             <div class="catalogue-item-info">
                                 <h4>${movie.name}</h4>
                                 <p><strong>Genre:</strong> ${movie.genre} | <strong>Year:</strong> ${movie.year}</p>
+                                ${movie.avg_rating > 0 ? `<p style="margin-top: 5px;">${generateStars(movie.avg_rating, movie.review_count)}</p>` : '<p style="margin-top: 5px; color: #999;">No ratings yet</p>'}
                             </div>
-                            <button class="btn-add-from-catalogue" onclick='addMovieFromCatalogue(${JSON.stringify(movie)})'>
-                                + Add to My List
-                            </button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-review" onclick='openReviewModal(${JSON.stringify(movie)})'>
+                                    ⭐ Rate
+                                </button>
+                                <button class="btn-add-from-catalogue" onclick='addMovieFromCatalogue(${JSON.stringify(movie)})'>
+                                    + Add to My List
+                                </button>
+                            </div>
                         </div>
                     `).join('');
                     catalogueLoaded = true;  // Mark as loaded
@@ -1071,6 +1253,164 @@
                 }
             } catch (error) {
                 alert('Connection error. Please try again.');
+            }
+        }
+
+        // Helper function to generate star rating display
+        function generateStars(rating, reviewCount = 0) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let stars = '';
+            for (let i = 0; i < fullStars; i++) stars += '★';
+            if (hasHalfStar) stars += '☆';
+            for (let i = 0; i < emptyStars; i++) stars += '☆';
+            
+            const reviewText = reviewCount > 0 ? ` (${reviewCount})` : '';
+            return `<span class="rating-display"><span class="stars">${stars}</span> ${rating.toFixed(1)}${reviewText}</span>`;
+        }
+
+        // Open review modal
+        function openReviewModal(movie) {
+            if (!authToken) {
+                alert('Please login to submit a review');
+                return;
+            }
+
+            currentReviewMovie = movie;
+            selectedRating = 0;
+
+            // Update movie info
+            document.getElementById('reviewMovieInfo').innerHTML = `
+                <h4>${movie.name}</h4>
+                <p style="color: #666;"><strong>Genre:</strong> ${movie.genre} | <strong>Year:</strong> ${movie.year}</p>
+                ${movie.avg_rating > 0 ? `<p style="margin-top: 10px;">Current Rating: ${generateStars(movie.avg_rating, movie.review_count)}</p>` : ''}
+            `;
+
+            // Reset form
+            document.getElementById('reviewText').value = '';
+            document.querySelectorAll('#starRating .star').forEach(star => star.classList.remove('filled'));
+            document.getElementById('reviewSubmitError').classList.add('hidden');
+            document.getElementById('reviewSubmitSuccess').classList.add('hidden');
+
+            // Show modal
+            document.getElementById('reviewModal').classList.add('active');
+        }
+
+        // Close review modal
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.remove('active');
+            currentReviewMovie = null;
+            selectedRating = 0;
+        }
+
+        // Handle star rating clicks
+        document.addEventListener('DOMContentLoaded', () => {
+            const starRating = document.getElementById('starRating');
+            if (starRating) {
+                starRating.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('star')) {
+                        selectedRating = parseInt(e.target.dataset.rating);
+                        updateStarDisplay();
+                    }
+                });
+
+                starRating.addEventListener('mouseover', (e) => {
+                    if (e.target.classList.contains('star')) {
+                        const rating = parseInt(e.target.dataset.rating);
+                        highlightStars(rating);
+                    }
+                });
+
+                starRating.addEventListener('mouseout', () => {
+                    updateStarDisplay();
+                });
+            }
+
+            // Close modal when clicking outside
+            document.getElementById('reviewModal').addEventListener('click', (e) => {
+                if (e.target.id === 'reviewModal') {
+                    closeReviewModal();
+                }
+            });
+        });
+
+        function highlightStars(rating) {
+            document.querySelectorAll('#starRating .star').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('filled');
+                } else {
+                    star.classList.remove('filled');
+                }
+            });
+        }
+
+        function updateStarDisplay() {
+            highlightStars(selectedRating);
+        }
+
+        // Submit review
+        async function submitReview() {
+            const errorEl = document.getElementById('reviewSubmitError');
+            const successEl = document.getElementById('reviewSubmitSuccess');
+            const reviewText = document.getElementById('reviewText').value.trim();
+
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            if (selectedRating === 0) {
+                errorEl.textContent = 'Please select a rating';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (!currentReviewMovie || !currentReviewMovie.id) {
+                errorEl.textContent = 'Invalid movie';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authToken
+                    },
+                    body: JSON.stringify({
+                        movie_id: currentReviewMovie.id,
+                        rating: selectedRating,
+                        review_text: reviewText
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    logout();
+                    return;
+                }
+
+                if (response.ok) {
+                    successEl.textContent = `Review submitted! New average rating: ${data.new_avg_rating} (${data.total_reviews} reviews)`;
+                    successEl.classList.remove('hidden');
+                    
+                    // Reload catalogue and recommendations to show updated ratings
+                    setTimeout(() => {
+                        closeReviewModal();
+                        if (catalogueLoaded) {
+                            loadCatalogue(true);
+                        }
+                    }, 2000);
+                } else {
+                    errorEl.textContent = data.error || 'Failed to submit review';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.classList.remove('hidden');
             }
         }
 

@@ -2,6 +2,134 @@
 
 ## Recent Updates
 
+### Movie Review & Rating System
+
+**Added**: Comprehensive review and rating system allowing users to rate movies (1-5 stars) and write reviews.
+
+#### Features:
+
+**Rating System**:
+- Users can rate any movie from 1 to 5 stars
+- Ratings are averaged across all users
+- Each movie displays its average rating and review count
+- Star rating displayed with ★ symbols (visual feedback)
+
+**Review Submission**:
+- Users can write text reviews (optional)
+- One review per user per movie (updates if user reviews again)
+- Requires authentication to submit reviews
+- Beautiful modal interface for rating/reviewing
+
+**Display**:
+- Ratings shown in catalogue browse view
+- Ratings shown in recommendations
+- "No ratings yet" for unrated movies
+- Review count displayed next to rating
+- ⭐ Rate button on each movie
+
+**Data Management**:
+- Automatic average rating calculation
+- Review count tracking
+- Prevents duplicate reviews (one per user per movie)
+- Updates allowed (user can change their rating/review)
+
+#### Technical Implementation:
+
+**Database Changes**:
+- Added `reviews` table:
+  - `movie_id` (foreign key to allMovies)
+  - `user_id` (identifies reviewer)
+  - `rating` (1-5, with CHECK constraint)
+  - `review_text` (optional TEXT field)
+  - `created_at` (timestamp)
+  - UNIQUE constraint on (movie_id, user_id)
+- Added to `allMovies` table:
+  - `avg_rating` (FLOAT, default 0.0)
+  - `review_count` (INT, default 0)
+
+**Backend (Catalogue Service)**:
+- `POST /catalogue/reviews` - Submit/update review
+  - Validates rating (1-5 range)
+  - UPSERT operation (insert or update)
+  - Automatically recalculates average rating
+  - Returns new average and review count
+- `GET /catalogue/reviews/<movie_id>` - Get all reviews for a movie
+  - Returns movie info with average rating
+  - Returns list of all reviews with user IDs
+- Updated existing endpoints to include ratings in responses
+
+**Middleware (Auth & API Services)**:
+- `POST /auth/reviews` - Requires JWT token, extracts user_id
+- `GET /auth/reviews/<movie_id>` - Public, no auth required
+- `POST /api/reviews` - Forwards with auth token
+- `GET /api/reviews/<movie_id>` - Public endpoint
+
+**Frontend**:
+- **Star Rating Display**: Helper function `generateStars(rating, count)`
+- **Review Modal**: Beautiful overlay modal for rating/reviewing
+  - Interactive star rating (click to select)
+  - Hover effects on stars
+  - Optional text review area
+  - Real-time validation
+  - Success/error feedback
+- **Updated Movie Cards**: Show ratings and "⭐ Rate" button
+- **Ratings in Catalogue**: Browse tab shows ratings
+- **Ratings in Recommendations**: All recommendations show ratings
+
+#### User Flow:
+
+1. **Browse movies** in catalogue or recommendations
+2. **See ratings** - average stars and review count
+3. **Click "⭐ Rate"** button on any movie
+4. **Modal opens** showing movie details
+5. **Select rating** (1-5 stars with visual feedback)
+6. **Write review** (optional text)
+7. **Submit** - new average calculated and displayed
+8. **Reload** - updated ratings show everywhere
+
+#### API Examples:
+
+**Submit Review:**
+```json
+POST /api/reviews
+Headers: { "Authorization": "token" }
+Body: {
+  "movie_id": 123,
+  "rating": 4,
+  "review_text": "Great movie!"
+}
+
+Response: {
+  "message": "Review submitted successfully",
+  "new_avg_rating": 4.2,
+  "total_reviews": 15
+}
+```
+
+**Get Reviews:**
+```json
+GET /api/reviews/123
+
+Response: {
+  "movie": {
+    "id": 123,
+    "name": "The Matrix",
+    "avg_rating": 4.2,
+    "review_count": 15
+  },
+  "reviews": [
+    {
+      "user_id": 456,
+      "rating": 5,
+      "review_text": "Amazing!",
+      "created_at": "2026-01-20T..."
+    }
+  ]
+}
+```
+
+---
+
 ### Movie Recommendation System
 
 **Added**: Intelligent movie recommendation system based on genre preferences and popularity.

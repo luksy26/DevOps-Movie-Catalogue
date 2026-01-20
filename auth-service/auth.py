@@ -408,6 +408,63 @@ def get_recommendations():
             }
         ), 500
 
+@app.route('/auth/reviews', methods=['POST'])
+def submit_review():
+    """
+    Submit a review for a movie. Requires authentication.
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Token is missing"}), 401
+
+    try:
+        # Decode token to get user_id
+        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = decoded_token.get('user_id')
+
+        # Get review data and add user_id
+        data = request.get_json()
+        data['user_id'] = user_id
+
+        # Forward to catalogue service
+        response = requests.post(
+            f"{CATALOGUE_SERVICE_URL}/catalogue/reviews",
+            json=data,
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to catalogue service",
+                "details": str(e)
+            }
+        ), 500
+
+@app.route('/auth/reviews/<int:movie_id>', methods=['GET'])
+def get_movie_reviews(movie_id):
+    """
+    Get reviews for a movie. No authentication required.
+    """
+    try:
+        response = requests.get(
+            f"{CATALOGUE_SERVICE_URL}/catalogue/reviews/{movie_id}",
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to catalogue service",
+                "details": str(e)
+            }
+        ), 500
+
 if __name__ == '__main__':
     logging.debug("Trying to initialize 'users' table in database...")
     while not initialize_table():

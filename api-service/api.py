@@ -242,5 +242,47 @@ def get_recommendations():
             }
         ), 500
 
+@app.route('/api/reviews', methods=['POST'])
+def submit_review():
+    """
+    Submit a review for a movie. Requires authentication.
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"message": "Token is missing"}), 401
+
+    data = request.get_json()
+    try:
+        response = requests.post(
+            f"{AUTH_SERVICE_URL}/auth/reviews",
+            headers={"Authorization": token},
+            json=data,
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
+@app.route('/api/reviews/<int:movie_id>', methods=['GET'])
+def get_movie_reviews(movie_id):
+    """
+    Get reviews for a movie. Public endpoint.
+    """
+    try:
+        response = requests.get(f"{AUTH_SERVICE_URL}/auth/reviews/{movie_id}", timeout=5)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
