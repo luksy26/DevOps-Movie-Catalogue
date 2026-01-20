@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>🎯 Get Recommendations TEST</h1>
+    <p>If you can see this, the file is being served correctly.</p>
+    <div id="genreSelection">Genre chips should appear here</div>
+    <button onclick="alert('Button works!')">Test Button</button>
+    
+    <script>
+        console.log('Debug file loaded');
+        const AVAILABLE_GENRES = ['Action', 'Comedy', 'Drama'];
+        const genreContainer = document.getElementById('genreSelection');
+        genreContainer.innerHTML = AVAILABLE_GENRES.map(genre => `
+            <div style="display: inline-block; padding: 10px; margin: 5px; border: 2px solid blue;">
+                ${genre}
+            </div>
+        `).join('');
+    </script>
+</body>
+</html>

@@ -384,6 +384,30 @@ def get_all_movies():
             }
         ), 500
 
+@app.route('/auth/recommendations', methods=['POST'])
+def get_recommendations():
+    """
+    Get movie recommendations based on selected genres.
+    No authentication required - public recommendations.
+    """
+    data = request.get_json()
+    
+    try:
+        response = requests.post(
+            f"{CATALOGUE_SERVICE_URL}/catalogue/recommendations",
+            json=data,
+            timeout=5
+        )
+        logging.debug("Response from catalogue/recommendations: " + response.text)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to catalogue service",
+                "details": str(e)
+            }
+        ), 500
+
 if __name__ == '__main__':
     logging.debug("Trying to initialize 'users' table in database...")
     while not initialize_table():

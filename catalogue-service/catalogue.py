@@ -96,6 +96,7 @@ def initialize_table():
                     name VARCHAR(255) NOT NULL,
                     genre VARCHAR(100) NOT NULL,
                     year INT NOT NULL,
+                    popularity FLOAT DEFAULT 0.0,
                     UNIQUE(name, year)
                 )
                 """
@@ -169,6 +170,7 @@ def populate_movies_from_tmdb():
                         title = movie.get('title') or movie.get('original_title', 'Unknown')
                         release_date = movie.get('release_date', '')
                         year = int(release_date.split('-')[0]) if release_date else 0
+                        popularity = float(movie.get('popularity', 0.0))
                         
                         # Get first genre from genre_ids
                         genre_ids = movie.get('genre_ids', [])
@@ -181,11 +183,11 @@ def populate_movies_from_tmdb():
                         # Insert into allMovies table (ignore duplicates)
                         cur.execute(
                             """
-                            INSERT INTO allMovies (name, genre, year)
-                            VALUES (%s, %s, %s)
+                            INSERT INTO allMovies (name, genre, year, popularity)
+                            VALUES (%s, %s, %s, %s)
                             ON CONFLICT (name, year) DO NOTHING
                             """,
-                            (title, genre, year)
+                            (title, genre, year, popularity)
                         )
                         
                         total_movies_added += 1
@@ -420,7 +422,7 @@ def get_all_movies():
             # Fetch all movies from the catalogue
             cur.execute(
                 """
-                SELECT id, name, genre, year
+                SELECT id, name, genre, year, popularity
                 FROM allMovies
                 ORDER BY name ASC
                 """
@@ -443,7 +445,8 @@ def get_all_movies():
                     "id": movie[0],
                     "name": movie[1], 
                     "genre": movie[2], 
-                    "year": movie[3]
+                    "year": movie[3],
+                    "popularity": movie[4]
                 } 
                 for movie in movies
             ]
@@ -452,6 +455,76 @@ def get_all_movies():
             return jsonify({"movies": movie_list}), 200
         except psycopg2.Error as e:
             return jsonify({"error": f"Error fetching catalogue: {str(e)}"}), 500
+        finally:
+            conn.close()
+
+    return jsonify(error_info), 500
+
+# Get movie recommendations based on genres
+@app.route('/catalogue/recommendations', methods=['POST'])
+def get_recommendations():
+    """
+    Get movie recommendations based on selected genres and popularity
+    Input: { "genres": ["Action", "Comedy", "Drama"] }
+    Output: List of movies from those genres, sorted by popularity
+    """
+    data = request.get_json()
+    genres = data.get('genres', [])
+    limit = data.get('limit', 20)  # Default to top 20 recommendations
+
+    if not genres or not isinstance(genres, list):
+        return jsonify(
+            {
+                "error": "Genres array is required"
+            }
+        ), 400
+
+    conn, error_info = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+
+            # Build query to get movies matching any of the selected genres
+            # Use parameterized query to prevent SQL injection
+            placeholders = ', '.join(['%s'] * len(genres))
+            query = f"""
+                SELECT id, name, genre, year, popularity
+                FROM allMovies
+                WHERE genre IN ({placeholders})
+                ORDER BY popularity DESC
+                LIMIT %s
+            """
+            
+            cur.execute(query, (*genres, limit))
+            movies = cur.fetchall()
+            
+            logging.info(f"Found {len(movies)} recommendations for genres: {genres}")
+
+            if not movies:
+                return jsonify(
+                    {
+                        "message": "No recommendations found for selected genres",
+                        "recommendations": []
+                    }
+                ), 200
+
+            # Format the movie list
+            recommendations = [
+                {
+                    "id": movie[0],
+                    "name": movie[1], 
+                    "genre": movie[2], 
+                    "year": movie[3],
+                    "popularity": movie[4]
+                } 
+                for movie in movies
+            ]
+
+            cur.close()
+            return jsonify({"recommendations": recommendations}), 200
+            
+        except psycopg2.Error as e:
+            return jsonify({"error": f"Error fetching recommendations: {str(e)}"}), 500
         finally:
             conn.close()
 

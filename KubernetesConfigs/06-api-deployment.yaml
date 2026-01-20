@@ -29,8 +29,8 @@ spec:
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
-              value: "10.96.207.167" # PGHOSTADDR
+              value: "10.96.3.130" # PGHOSTADDR
             - name: PGPORT
               value: "5432"
             - name: AUTH_SERVICE_URL
-              value: "http://10.96.100.156:8090" # AUTH_SERVICE_URL
+              value: "http://10.96.104.49:8090" # AUTH_SERVICE_URL

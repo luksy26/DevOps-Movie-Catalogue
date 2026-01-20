@@ -323,6 +323,76 @@
         .btn-add-from-catalogue:hover {
             transform: scale(1.05);
         }
+
+        .genre-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .genre-chip {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+        }
+
+        .genre-chip:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .genre-chip.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .recommendations-section {
+            animation: fadeIn 0.5s;
+        }
+
+        .recommendation-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .recommendation-card:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .recommendation-info h4 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .recommendation-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .popularity-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 10px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -423,6 +493,27 @@
             <h3 style="margin-bottom: 15px;">Your Movies</h3>
             <div id="loadingMovies" class="loading hidden">Loading movies...</div>
             <div id="moviesList" class="movie-list"></div>
+
+            <!-- Recommendations Section -->
+            <div class="recommendations-section" style="margin-top: 40px;">
+                <h3 style="margin-bottom: 15px;">🎯 Get Recommendations</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+                    <p style="color: #666; margin-bottom: 15px;">Select genres you like to get personalized movie recommendations</p>
+                    
+                    <div id="genreSelection" class="genre-chips">
+                        <!-- Genre chips will be added dynamically -->
+                    </div>
+                    
+                    <button class="btn" onclick="getRecommendations()" style="margin-top: 15px;">
+                        Get Recommendations
+                    </button>
+                    
+                    <div id="recommendationsLoading" class="loading hidden">Finding recommendations...</div>
+                    <div id="recommendationsError" class="error-message hidden"></div>
+                    <div id="recommendationsSuccess" class="success-message hidden"></div>
+                    <div id="recommendationsList" class="movie-list" style="margin-top: 20px;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -431,6 +522,14 @@
         let authToken = null;
         let currentUsername = null;
         let catalogueLoaded = false;  // Track if catalogue has been loaded
+        let selectedGenres = [];  // Track selected genres for recommendations
+        
+        // Available genres (matching GENRE_MAP in backend)
+        const AVAILABLE_GENRES = [
+            'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary',
+            'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music',
+            'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'
+        ];
 
         // Load auth state from localStorage
         function loadAuthState() {
@@ -498,6 +597,7 @@
             localStorage.setItem('currentView', 'movies');
             loadMovies();
             loadCatalogue();
+            initializeGenreSelection();
         }
 
         // Switch between add movie tabs
@@ -612,10 +712,105 @@
             authToken = null;
             currentUsername = null;
             catalogueLoaded = false;  // Reset catalogue state on logout
+            selectedGenres = [];  // Reset selected genres
             clearAuthState();
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
             showLogin();
+        }
+
+        // Initialize genre selection chips
+        function initializeGenreSelection() {
+            console.log('Initializing genre selection...');
+            const genreContainer = document.getElementById('genreSelection');
+            console.log('Genre container element:', genreContainer);
+            if (!genreContainer) {
+                console.error('Genre container not found!');
+                return;
+            }
+            genreContainer.innerHTML = AVAILABLE_GENRES.map(genre => `
+                <div class="genre-chip" onclick="toggleGenre('${genre}')">
+                    ${genre}
+                </div>
+            `).join('');
+            console.log('Genre chips initialized:', AVAILABLE_GENRES.length, 'genres');
+        }
+
+        // Toggle genre selection
+        function toggleGenre(genre) {
+            const chips = document.querySelectorAll('.genre-chip');
+            const chip = Array.from(chips).find(c => c.textContent.trim() === genre);
+            
+            if (selectedGenres.includes(genre)) {
+                // Remove genre
+                selectedGenres = selectedGenres.filter(g => g !== genre);
+                chip.classList.remove('selected');
+            } else {
+                // Add genre
+                selectedGenres.push(genre);
+                chip.classList.add('selected');
+            }
+        }
+
+        // Get recommendations
+        async function getRecommendations() {
+            const loadingEl = document.getElementById('recommendationsLoading');
+            const errorEl = document.getElementById('recommendationsError');
+            const listEl = document.getElementById('recommendationsList');
+
+            // Clear previous state
+            errorEl.classList.add('hidden');
+            listEl.innerHTML = '';
+
+            // Validate selection
+            if (selectedGenres.length === 0) {
+                errorEl.textContent = 'Please select at least one genre';
+                errorEl.classList.remove('hidden');
+                setTimeout(() => errorEl.classList.add('hidden'), 3000);
+                return;
+            }
+
+            loadingEl.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/recommendations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        genres: selectedGenres,
+                        limit: 10  // Top 10 recommendations
+                    })
+                });
+
+                const data = await response.json();
+                loadingEl.classList.add('hidden');
+
+                if (response.ok && data.recommendations && data.recommendations.length > 0) {
+                    listEl.innerHTML = data.recommendations.map(movie => `
+                        <div class="recommendation-card">
+                            <div class="recommendation-info">
+                                <h4>
+                                    ${movie.name}
+                                    <span class="popularity-badge">⭐ ${movie.popularity.toFixed(1)}</span>
+                                </h4>
+                                <p>
+                                    <strong>Genre:</strong> ${movie.genre} | 
+                                    <strong>Year:</strong> ${movie.year}
+                                </p>
+                            </div>
+                            <button class="btn-add-from-catalogue" onclick='addMovieFromCatalogue(${JSON.stringify(movie)}, true)'>
+                                + Add to My List
+                            </button>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No recommendations found for selected genres. Try different genres!</p>';
+                }
+            } catch (error) {
+                loadingEl.classList.add('hidden');
+                errorEl.textContent = 'Error fetching recommendations. Please try again.';
+                errorEl.classList.remove('hidden');
+            }
         }
 
         // Load movies
@@ -709,11 +904,25 @@
         }
 
         // Add movie from catalogue
-        async function addMovieFromCatalogue(movie) {
-            const errorEl = document.getElementById('addMovieError');
-            const successEl = document.getElementById('addMovieSuccess');
+        async function addMovieFromCatalogue(movie, fromRecommendations = false) {
+            // Determine which message elements to use
+            let errorEl, successEl;
+            
+            if (fromRecommendations) {
+                errorEl = document.getElementById('recommendationsError');
+                successEl = document.getElementById('recommendationsSuccess');
+            } else {
+                errorEl = document.getElementById('addMovieError');
+                successEl = document.getElementById('addMovieSuccess');
+            }
 
-            clearMessages();
+            // Clear messages in the appropriate section
+            if (fromRecommendations) {
+                document.getElementById('recommendationsError').classList.add('hidden');
+                document.getElementById('recommendationsSuccess').classList.add('hidden');
+            } else {
+                clearMessages();
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/movies`, {

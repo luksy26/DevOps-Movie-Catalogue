@@ -2,6 +2,93 @@
 
 ## Recent Updates
 
+### Movie Recommendation System
+
+**Added**: Intelligent movie recommendation system based on genre preferences and popularity.
+
+#### Features:
+
+**Genre-Based Recommendations**:
+- Users can select from 18 different genres (Action, Comedy, Drama, Horror, etc.)
+- Multi-genre selection supported (select multiple genres at once)
+- Visual chip-based genre selection interface
+- Selected genres are highlighted with gradient background
+
+**Popularity-Based Ranking**:
+- Recommendations are sorted by TMDB popularity score
+- Shows top 10 most popular movies for selected genres
+- Popularity score displayed as a badge with each recommendation
+- Real popularity data from TMDB API
+
+**User Experience**:
+- Clean, modern UI with genre chips
+- Add recommended movies directly to your list with one click
+- Real-time recommendation updates
+- Empty state handling for no results
+- Loading states and error handling
+
+#### Technical Implementation:
+
+**Database Changes**:
+- Added `popularity` column to `allMovies` table (FLOAT type)
+- Stores TMDB popularity score for each movie
+- Updated TMDB fetching to include popularity data
+
+**Backend (Catalogue Service)**:
+- New endpoint: `POST /catalogue/recommendations`
+- Accepts: `{ "genres": ["Action", "Comedy"], "limit": 10 }`
+- Returns: Movies matching ANY selected genre, sorted by popularity DESC
+- Parameterized SQL queries for security
+
+**Middleware (Auth & API Services)**:
+- Added `/auth/recommendations` endpoint (forwards to catalogue)
+- Added `/api/recommendations` endpoint (forwards to auth)
+- Public endpoint - no authentication required
+
+**Frontend**:
+- New "Get Recommendations" section after movie list
+- 18 genre chips for selection (matching backend GENRE_MAP)
+- Toggle selection on/off with visual feedback
+- Recommendations displayed in cards with popularity badges
+- Direct "Add to My List" button for each recommendation
+
+#### Usage:
+
+1. Login to the application
+2. Scroll down to "🎯 Get Recommendations" section
+3. Click on genres you like (e.g., Action, Comedy, Thriller)
+4. Click "Get Recommendations" button
+5. See top 10 most popular movies from those genres
+6. Add movies to your list with one click
+
+#### API Details:
+
+**Request:**
+```json
+POST /api/recommendations
+{
+  "genres": ["Action", "Comedy", "Drama"],
+  "limit": 10
+}
+```
+
+**Response:**
+```json
+{
+  "recommendations": [
+    {
+      "id": 123,
+      "name": "The Matrix",
+      "genre": "Action",
+      "year": 1999,
+      "popularity": 278.37
+    }
+  ]
+}
+```
+
+---
+
 ### Performance Optimization - Catalogue Loading
 
 **Fixed**: Catalogue now loads only once instead of on every tab click.

@@ -28,6 +28,7 @@ All Kubernetes resources are also created using **Terraform**.
 - **Adding** a movie to the **current user's list** (manually or from catalogue)
 - **Deleting** a movie from the **current user's list**
 - **Browsing** the movie catalogue (auto-populated from TMDB API)
+- **Getting personalized recommendations** based on genre preferences and popularity
 
 ---
 

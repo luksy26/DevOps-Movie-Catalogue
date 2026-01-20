@@ -224,5 +224,23 @@ def get_all_movies():
             }
         ), 500
 
+@app.route('/api/recommendations', methods=['POST'])
+def get_recommendations():
+    """
+    Get movie recommendations based on selected genres.
+    Public endpoint - no authentication required.
+    """
+    data = request.get_json()
+    try:
+        response = requests.post(f"{AUTH_SERVICE_URL}/auth/recommendations", json=data, timeout=5)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
