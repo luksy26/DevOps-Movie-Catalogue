@@ -83,21 +83,33 @@ echo "Applying updated deployments..."
 kubectl apply -f KubernetesConfigs/06-api-deployment.yaml
 kubectl apply -f KubernetesConfigs/08-auth-deployment.yaml
 kubectl apply -f KubernetesConfigs/10-catalogue-deployment.yaml
-kubectl apply -f KubernetesConfigs/16-recommendation-deployment.yaml
-kubectl apply -f KubernetesConfigs/18-review-deployment.yaml
+
+if [ "$SKIP_NEW_SERVICES" = false ]; then
+    kubectl apply -f KubernetesConfigs/16-recommendation-deployment.yaml
+    kubectl apply -f KubernetesConfigs/18-review-deployment.yaml
+fi
 
 echo ""
 echo "Restarting deployments to pick up new IPs..."
-kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment recommendation-deployment review-deployment
+if [ "$SKIP_NEW_SERVICES" = false ]; then
+    kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment recommendation-deployment review-deployment
+else
+    kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment
+fi
 
 echo ""
 echo "Waiting for rollouts to complete (timeout: 2 minutes)..."
 kubectl rollout status deployment api-deployment --timeout=120s || echo "⚠️  API deployment taking longer than expected"
 kubectl rollout status deployment auth-deployment --timeout=120s || echo "⚠️  Auth deployment taking longer than expected"
 kubectl rollout status deployment catalogue-deployment --timeout=120s || echo "⚠️  Catalogue deployment taking longer than expected"
-kubectl rollout status deployment recommendation-deployment --timeout=120s || echo "⚠️  Recommendation deployment taking longer than expected"
-kubectl rollout status deployment review-deployment --timeout=120s || echo "⚠️  Review deployment taking longer than expected"
 
-echo ""
-echo "✅ All 5 services updated with current IPs!"
+if [ "$SKIP_NEW_SERVICES" = false ]; then
+    kubectl rollout status deployment recommendation-deployment --timeout=120s || echo "⚠️  Recommendation deployment taking longer than expected"
+    kubectl rollout status deployment review-deployment --timeout=120s || echo "⚠️  Review deployment taking longer than expected"
+    echo ""
+    echo "✅ All 5 services updated with current IPs!"
+else
+    echo ""
+    echo "✅ Core 3 services updated with current IPs!"
+fi
 
