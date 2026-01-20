@@ -35,21 +35,24 @@ echo "Updating api-deployment.yaml..."
 sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/06-api-deployment.yaml
 sed -i '' "s|value: \"http://[0-9.]*:8090\" # AUTH_SERVICE_URL|value: \"http://$AUTH_IP:8090\" # AUTH_SERVICE_URL|" KubernetesConfigs/06-api-deployment.yaml
 
-# Get Recommendation and Review service IPs
+# Get Recommendation, Review, and Notification service IPs
 RECOMMENDATION_IP=$(kubectl get service recommendation-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
 REVIEW_IP=$(kubectl get service review-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+NOTIFICATION_IP=$(kubectl get service notification-service -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
 
 # Verify new services exist
-if [ -z "$RECOMMENDATION_IP" ] || [ -z "$REVIEW_IP" ]; then
+if [ -z "$RECOMMENDATION_IP" ] || [ -z "$REVIEW_IP" ] || [ -z "$NOTIFICATION_IP" ]; then
     echo "⚠️  Warning: New services not found!"
     echo "   Recommendation IP: ${RECOMMENDATION_IP:-NOT FOUND}"
     echo "   Review IP: ${REVIEW_IP:-NOT FOUND}"
-    echo "   Skipping recommendation/review service URL updates in auth-deployment"
+    echo "   Notification IP: ${NOTIFICATION_IP:-NOT FOUND}"
+    echo "   Skipping new service URL updates in auth-deployment"
     echo ""
     SKIP_NEW_SERVICES=true
 else
     echo "  Recommendation: $RECOMMENDATION_IP"
     echo "  Review:         $REVIEW_IP"
+    echo "  Notification:   $NOTIFICATION_IP"
     echo ""
     SKIP_NEW_SERVICES=false
 fi
@@ -62,6 +65,7 @@ sed -i '' "s|value: \"http://[0-9.]*:8091\" # CATALOGUE_SERVICE_URL|value: \"htt
 if [ "$SKIP_NEW_SERVICES" = false ]; then
     sed -i '' "s|value: \"http://[0-9.]*:8092\" # RECOMMENDATION_SERVICE_URL|value: \"http://$RECOMMENDATION_IP:8092\" # RECOMMENDATION_SERVICE_URL|" KubernetesConfigs/08-auth-deployment.yaml
     sed -i '' "s|value: \"http://[0-9.]*:8093\" # REVIEW_SERVICE_URL|value: \"http://$REVIEW_IP:8093\" # REVIEW_SERVICE_URL|" KubernetesConfigs/08-auth-deployment.yaml
+    sed -i '' "s|value: \"http://[0-9.]*:8094\" # NOTIFICATION_SERVICE_URL|value: \"http://$NOTIFICATION_IP:8094\" # NOTIFICATION_SERVICE_URL|" KubernetesConfigs/08-auth-deployment.yaml
 fi
 
 # Update Catalogue deployment (needs Postgres IP)
@@ -76,6 +80,10 @@ sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADD
 echo "Updating review-deployment.yaml..."
 sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/18-review-deployment.yaml
 
+# Update Notification deployment (needs Postgres IP)
+echo "Updating notification-deployment.yaml..."
+sed -i '' "s/value: \"[0-9.]*\" # PGHOSTADDR/value: \"$POSTGRES_IP\" # PGHOSTADDR/" KubernetesConfigs/20-notification-deployment.yaml
+
 echo ""
 echo "✅ Service IPs updated in deployment files!"
 echo ""
@@ -87,12 +95,13 @@ kubectl apply -f KubernetesConfigs/10-catalogue-deployment.yaml
 if [ "$SKIP_NEW_SERVICES" = false ]; then
     kubectl apply -f KubernetesConfigs/16-recommendation-deployment.yaml
     kubectl apply -f KubernetesConfigs/18-review-deployment.yaml
+    kubectl apply -f KubernetesConfigs/20-notification-deployment.yaml
 fi
 
 echo ""
 echo "Restarting deployments to pick up new IPs..."
 if [ "$SKIP_NEW_SERVICES" = false ]; then
-    kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment recommendation-deployment review-deployment
+    kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment recommendation-deployment review-deployment notification-deployment
 else
     kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment
 fi
@@ -106,8 +115,9 @@ kubectl rollout status deployment catalogue-deployment --timeout=120s || echo "�
 if [ "$SKIP_NEW_SERVICES" = false ]; then
     kubectl rollout status deployment recommendation-deployment --timeout=120s || echo "⚠️  Recommendation deployment taking longer than expected"
     kubectl rollout status deployment review-deployment --timeout=120s || echo "⚠️  Review deployment taking longer than expected"
+    kubectl rollout status deployment notification-deployment --timeout=120s || echo "⚠️  Notification deployment taking longer than expected"
     echo ""
-    echo "✅ All 5 services updated with current IPs!"
+    echo "✅ All 6 services updated with current IPs!"
 else
     echo ""
     echo "✅ Core 3 services updated with current IPs!"

@@ -29,6 +29,10 @@ REVIEW_SERVICE_URL = os.environ.get(
     "REVIEW_SERVICE_URL",
     "http://review-service:8093"
     )
+NOTIFICATION_SERVICE_URL = os.environ.get(
+    "NOTIFICATION_SERVICE_URL",
+    "http://notification-service:8094"
+    )
 
 # Database configuration (read from environment variables)
 DB_HOST = os.environ.get("PGHOST", "postgres")
@@ -189,12 +193,28 @@ def login():
 
             if user and bcrypt.checkpw(password.encode('utf-8'), decoded_hash):
                 # Password match, generate JWT token
+                user_id = user[0]
                 payload = {
-                    "user_id": user[0],
+                    "user_id": user_id,
                     "exp": datetime.datetime.now(datetime.timezone.utc) 
                             + datetime.timedelta(hours=1)  # Token expiry
                 }
                 token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+                
+                # Register user session with notification service
+                try:
+                    session_response = requests.post(
+                        f"{NOTIFICATION_SERVICE_URL}/notifications/session",
+                        json={"user_id": user_id},
+                        timeout=2
+                    )
+                    if session_response.status_code == 200:
+                        logging.info(f"✅ User session registered with notification service: {user_id}")
+                    else:
+                        logging.warning(f"⚠️  Failed to register session: {session_response.status_code}")
+                except Exception as e:
+                    logging.error(f"⚠️  Could not reach notification service: {e}")
+                
                 return jsonify({"token": token}), 200
             else:
                 return jsonify({"error": "Invalid credentials"}), 401
@@ -469,6 +489,106 @@ def get_movie_reviews(movie_id):
         return jsonify(
             {
                 "error": "Unable to connect to review service",
+                "details": str(e)
+            }
+        ), 500
+
+# =====================================================
+# NOTIFICATION SERVICE ENDPOINTS
+# =====================================================
+
+@app.route('/auth/notifications', methods=['GET'])
+def get_user_notifications():
+    """
+    Get notifications for the authenticated user
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Token is missing"}), 401
+
+    try:
+        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = decoded_token.get('user_id')
+
+        # Forward to notification service
+        response = requests.get(
+            f"{NOTIFICATION_SERVICE_URL}/notifications/{user_id}",
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to notification service",
+                "details": str(e)
+            }
+        ), 500
+
+@app.route('/auth/notifications/unread-count', methods=['GET'])
+def get_unread_notification_count():
+    """
+    Get count of unread notifications for the authenticated user
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Token is missing"}), 401
+
+    try:
+        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = decoded_token.get('user_id')
+
+        # Forward to notification service
+        response = requests.get(
+            f"{NOTIFICATION_SERVICE_URL}/notifications/{user_id}/unread-count",
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to notification service",
+                "details": str(e)
+            }
+        ), 500
+
+@app.route('/auth/notifications/<int:notification_id>/read', methods=['PUT'])
+def mark_notification_as_read(notification_id):
+    """
+    Mark a notification as read
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Token is missing"}), 401
+
+    try:
+        # Verify token
+        jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+
+        # Forward to notification service
+        response = requests.put(
+            f"{NOTIFICATION_SERVICE_URL}/notifications/{notification_id}/read",
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to notification service",
                 "details": str(e)
             }
         ), 500

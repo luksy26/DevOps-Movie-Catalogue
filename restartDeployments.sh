@@ -47,12 +47,21 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
+echo "Restarting Notification deployment..."
+kubectl rollout restart deployment notification-deployment
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to restart Notification deployment"
+    exit 1
+fi
+
+echo ""
 echo "Waiting for deployments to be ready (timeout: 2 minutes)..."
 kubectl rollout status deployment api-deployment --timeout=120s || echo "⚠️  API deployment taking longer than expected"
 kubectl rollout status deployment auth-deployment --timeout=120s || echo "⚠️  Auth deployment taking longer than expected"
 kubectl rollout status deployment catalogue-deployment --timeout=120s || echo "⚠️  Catalogue deployment taking longer than expected"
 kubectl rollout status deployment recommendation-deployment --timeout=120s || echo "⚠️  Recommendation deployment taking longer than expected"
 kubectl rollout status deployment review-deployment --timeout=120s || echo "⚠️  Review deployment taking longer than expected"
+kubectl rollout status deployment notification-deployment --timeout=120s || echo "⚠️  Notification deployment taking longer than expected"
 
 echo ""
 echo "========================================="

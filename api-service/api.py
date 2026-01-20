@@ -284,5 +284,81 @@ def get_movie_reviews(movie_id):
             }
         ), 500
 
+# =====================================================
+# NOTIFICATION ENDPOINTS
+# =====================================================
+
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    """
+    Get notifications for the authenticated user
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Authorization token required"}), 401
+
+    try:
+        response = requests.get(
+            f"{AUTH_SERVICE_URL}/auth/notifications",
+            headers={"Authorization": token},
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
+@app.route('/api/notifications/unread-count', methods=['GET'])
+def get_unread_count():
+    """
+    Get count of unread notifications for the authenticated user
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Authorization token required"}), 401
+
+    try:
+        response = requests.get(
+            f"{AUTH_SERVICE_URL}/auth/notifications/unread-count",
+            headers={"Authorization": token},
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
+def mark_notification_read(notification_id):
+    """
+    Mark a notification as read
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Authorization token required"}), 401
+
+    try:
+        response = requests.put(
+            f"{AUTH_SERVICE_URL}/auth/notifications/{notification_id}/read",
+            headers={"Authorization": token},
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)

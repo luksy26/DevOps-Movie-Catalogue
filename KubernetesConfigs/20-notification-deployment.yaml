@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalogue-deployment
+  name: notification-deployment
   namespace: default
   labels:
-    app: catalogue
+    app: notification
 spec:
-  replicas: 1  # Number of replicas you want for your catalogue container
+  replicas: 1
   selector:
     matchLabels:
-      app: catalogue  # Match the label of the pod to ensure the deployment controls the pods
+      app: notification
   template:
     metadata:
       labels:
-        app: catalogue
+        app: notification
     spec:
       containers:
-        - name: catalogue-service-container
-          image: lucaslazaroiu/ccproject:catalogue-service
+        - name: notification-service-container
+          image: lucaslazaroiu/ccproject:notification-service
           imagePullPolicy: Always
           ports:
-            - containerPort: 8091
+            - containerPort: 8094
           env:
             - name: PGUSER
               value: "admin"
@@ -28,8 +28,6 @@ spec:
               value: "admin"
             - name: PGDATABASE
               value: "movieApp"
-            - name: PGDATATABLE
-              value: "movies"
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
@@ -39,5 +37,5 @@ spec:
             - name: TMDB_API_TOKEN
               valueFrom:
                 configMapKeyRef:
-                  name: db-config-map
+                  name: tmdb-config
                   key: TMDB_API_TOKEN
