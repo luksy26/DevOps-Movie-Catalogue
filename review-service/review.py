@@ -156,9 +156,11 @@ def submit_review():
                 (avg_rating or 0.0, review_count or 0, movie_id)
             )
 
+            # Commit the transaction
             conn.commit()
             cur.close()
 
+            # Return success response with review details
             return jsonify({
                 "message": "Review submitted successfully",
                 "review_id": review_id,
