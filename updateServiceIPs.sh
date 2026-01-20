@@ -48,10 +48,10 @@ echo "Restarting deployments to pick up new IPs..."
 kubectl rollout restart deployment api-deployment auth-deployment catalogue-deployment
 
 echo ""
-echo "Waiting for rollouts to complete..."
-kubectl rollout status deployment api-deployment
-kubectl rollout status deployment auth-deployment
-kubectl rollout status deployment catalogue-deployment
+echo "Waiting for rollouts to complete (timeout: 2 minutes)..."
+kubectl rollout status deployment api-deployment --timeout=120s || echo "⚠️  API deployment taking longer than expected"
+kubectl rollout status deployment auth-deployment --timeout=120s || echo "⚠️  Auth deployment taking longer than expected"
+kubectl rollout status deployment catalogue-deployment --timeout=120s || echo "⚠️  Catalogue deployment taking longer than expected"
 
 echo ""
 echo "✅ All services updated with current IPs!"

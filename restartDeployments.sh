@@ -31,10 +31,10 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "Waiting for deployments to be ready..."
-kubectl rollout status deployment api-deployment
-kubectl rollout status deployment auth-deployment
-kubectl rollout status deployment catalogue-deployment
+echo "Waiting for deployments to be ready (timeout: 2 minutes)..."
+kubectl rollout status deployment api-deployment --timeout=120s || echo "⚠️  API deployment taking longer than expected"
+kubectl rollout status deployment auth-deployment --timeout=120s || echo "⚠️  Auth deployment taking longer than expected"
+kubectl rollout status deployment catalogue-deployment --timeout=120s || echo "⚠️  Catalogue deployment taking longer than expected"
 
 echo ""
 echo "========================================="
