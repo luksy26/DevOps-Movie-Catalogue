@@ -233,6 +233,38 @@ def login():
 
     return jsonify(error_info), 500
 
+@app.route('/auth/logout', methods=['POST'])
+def logout():
+    """Logout user and mark session as inactive"""
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Token is missing"}), 401
+
+    try:
+        # Decode token to get user_id
+        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = decoded_token.get('user_id')
+        
+        # Mark session as inactive in notification service
+        try:
+            session_response = requests.delete(
+                f"{NOTIFICATION_SERVICE_URL}/notifications/session/{user_id}",
+                timeout=2
+            )
+            if session_response.status_code == 200:
+                logging.info(f"✅ User session ended: {user_id}")
+            else:
+                logging.warning(f"⚠️  Failed to end session: {session_response.status_code}")
+        except Exception as e:
+            logging.error(f"⚠️  Could not reach notification service: {e}")
+        
+        return jsonify({"message": "Logged out successfully"}), 200
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+
 @app.route('/auth/movies', methods=['GET'])
 def get_movies():
     import time

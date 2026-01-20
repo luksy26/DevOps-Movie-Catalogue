@@ -62,6 +62,30 @@ def api_login():
             }
             ), 500
 
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    """
+    Logout a user. Marks their session as inactive.
+    """
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"error": "Authorization token required"}), 401
+
+    try:
+        response = requests.post(
+            f"{AUTH_SERVICE_URL}/auth/logout",
+            headers={"Authorization": token},
+            timeout=5
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {
+                "error": "Unable to connect to auth service",
+                "details": str(e)
+            }
+        ), 500
+
 @app.route('/api/protected', methods=['GET'])
 def api_protected():
     """

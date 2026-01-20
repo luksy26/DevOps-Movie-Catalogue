@@ -233,6 +233,20 @@ def notification_background_task():
             try:
                 cur = conn.cursor()
                 
+                # Auto-expire old sessions (inactive for 1+ hours, matching JWT expiration)
+                cur.execute(
+                    """
+                    UPDATE user_sessions
+                    SET is_active = FALSE
+                    WHERE is_active = TRUE
+                    AND login_time < NOW() - INTERVAL '1 hour'
+                    """
+                )
+                expired_count = cur.rowcount
+                if expired_count > 0:
+                    logging.info(f"⏰ Auto-expired {expired_count} old session(s)")
+                    conn.commit()
+                
                 # Find active users who haven't received a notification recently
                 # (or never received one, or it's been more than 20 seconds)
                 cur.execute(
