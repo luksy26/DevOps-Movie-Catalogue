@@ -9,6 +9,9 @@ import random
 import time
 import threading
 from datetime import datetime, timedelta
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,6 +29,12 @@ DB_NAME = os.environ.get("PGDATABASE", "movieApp")
 # TMDB API configuration
 TMDB_API_TOKEN = os.environ.get("TMDB_API_TOKEN", "")
 TMDB_UPCOMING_URL = "https://api.themoviedb.org/3/movie/upcoming"
+
+# SMTP configuration for Mailpit
+SMTP_HOST = os.environ.get("SMTP_HOST", "mailpit")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 1025))
+SMTP_FROM = os.environ.get("SMTP_FROM", "notifications@movieapp.local")
+EMAIL_ENABLED = os.environ.get("EMAIL_ENABLED", "true").lower() == "true"
 
 # Function to establish a database connection
 def get_db_connection():
@@ -63,6 +72,7 @@ def initialize_tables():
                 CREATE TABLE IF NOT EXISTS user_sessions (
                     id SERIAL PRIMARY KEY,
                     user_id INT NOT NULL UNIQUE,
+                    user_email VARCHAR(255),
                     login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_notification_time TIMESTAMP,
                     is_active BOOLEAN DEFAULT TRUE
@@ -100,6 +110,79 @@ def initialize_tables():
     else:
         logging.error(f"❌ Database connection failed: {error_info}")
     return False
+
+# Send email notification
+def send_email_notification(to_email, movie_title, movie_overview, movie_rating, movie_release_date, movie_poster_path):
+    """Send email notification for a new movie recommendation"""
+    if not EMAIL_ENABLED:
+        logging.debug("📧 Email notifications disabled")
+        return False
+    
+    if not to_email:
+        logging.warning("⚠️  No email address provided, skipping email")
+        return False
+    
+    try:
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['From'] = SMTP_FROM
+        msg['To'] = to_email
+        msg['Subject'] = f"🎬 New Movie Recommendation: {movie_title}"
+        
+        # Create HTML body
+        poster_url = f"https://image.tmdb.org/t/p/w500{movie_poster_path}" if movie_poster_path else ""
+        
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .movie-title {{ font-size: 24px; font-weight: bold; margin-bottom: 15px; color: #667eea; }}
+                .movie-info {{ margin: 15px 0; }}
+                .rating {{ color: #ffa500; font-weight: bold; }}
+                .poster {{ max-width: 300px; border-radius: 10px; margin: 20px 0; }}
+                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #999; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎬 New Movie Recommendation!</h1>
+                </div>
+                <div class="content">
+                    <div class="movie-title">{movie_title}</div>
+                    <div class="movie-info">
+                        <p><span class="rating">⭐ {movie_rating:.1f}/10</span> | 📅 {movie_release_date}</p>
+                    </div>
+                    {"<img src='" + poster_url + "' class='poster' alt='Movie Poster'>" if poster_url else ""}
+                    <p>{movie_overview}</p>
+                    <div class="footer">
+                        <p>This is an automated notification from Movie Catalogue App</p>
+                        <p>Login to view more details and add this movie to your watchlist!</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Attach HTML body
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Send email
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.send_message(msg)
+            logging.info(f"📧 Email sent to {to_email}: {movie_title}")
+            return True
+            
+    except Exception as e:
+        logging.error(f"❌ Failed to send email to {to_email}: {e}")
+        return False
 
 # Fetch upcoming movies from TMDB
 def fetch_upcoming_movies():
@@ -154,7 +237,7 @@ def notification_background_task():
                 # (or never received one, or it's been more than 20 seconds)
                 cur.execute(
                     """
-                    SELECT user_id, last_notification_time
+                    SELECT user_id, user_email, last_notification_time
                     FROM user_sessions
                     WHERE is_active = TRUE
                     AND (
@@ -184,9 +267,15 @@ def notification_background_task():
                     continue
                 
                 # Send notification to each eligible user
-                for user_id, last_notif_time in active_users:
+                for user_id, user_email, last_notif_time in active_users:
                     # Pick a random movie
                     movie = random.choice(upcoming_movies)
+                    
+                    movie_title = movie.get("title", "Unknown")
+                    movie_overview = movie.get("overview", "")
+                    movie_poster_path = movie.get("poster_path", "")
+                    movie_release_date = movie.get("release_date", "")
+                    movie_rating = movie.get("vote_average", 0.0)
                     
                     # Insert notification
                     cur.execute(
@@ -199,13 +288,26 @@ def notification_background_task():
                         (
                             user_id,
                             movie.get("id"),
-                            movie.get("title", "Unknown"),
-                            movie.get("overview", ""),
-                            movie.get("poster_path", ""),
-                            movie.get("release_date", ""),
-                            movie.get("vote_average", 0.0)
+                            movie_title,
+                            movie_overview,
+                            movie_poster_path,
+                            movie_release_date,
+                            movie_rating
                         )
                     )
+                    
+                    # Send email notification
+                    if user_email:
+                        send_email_notification(
+                            user_email,
+                            movie_title,
+                            movie_overview,
+                            movie_rating,
+                            movie_release_date,
+                            movie_poster_path
+                        )
+                    else:
+                        logging.debug(f"⚠️  User {user_id} has no email address, skipping email notification")
                     
                     # Update last notification time
                     cur.execute(
@@ -245,6 +347,7 @@ def update_session():
     """Register or update user session"""
     data = request.get_json()
     user_id = data.get('user_id')
+    user_email = data.get('user_email', None)  # Optional email
     
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
@@ -254,24 +357,28 @@ def update_session():
         try:
             cur = conn.cursor()
             
-            # Upsert user session
+            # Upsert user session with email
             cur.execute(
                 """
-                INSERT INTO user_sessions (user_id, login_time, is_active)
-                VALUES (%s, NOW(), TRUE)
+                INSERT INTO user_sessions (user_id, user_email, login_time, is_active)
+                VALUES (%s, %s, NOW(), TRUE)
                 ON CONFLICT (user_id)
                 DO UPDATE SET
+                    user_email = COALESCE(EXCLUDED.user_email, user_sessions.user_email),
                     login_time = NOW(),
                     is_active = TRUE,
                     last_notification_time = NULL
                 """,
-                (user_id,)
+                (user_id, user_email)
             )
             
             conn.commit()
             cur.close()
             
-            logging.info(f"✅ User session registered: {user_id}")
+            if user_email:
+                logging.info(f"✅ User session registered: {user_id} ({user_email})")
+            else:
+                logging.info(f"✅ User session registered: {user_id} (no email)")
             return jsonify({"message": "Session registered successfully"}), 200
             
         except psycopg2.Error as e:

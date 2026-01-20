@@ -78,7 +78,8 @@ def initialize_table():
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
-                    password VARCHAR(255) NOT NULL
+                    password VARCHAR(255) NOT NULL,
+                    email VARCHAR(255)
                 )
                 """
             )
@@ -106,6 +107,7 @@ def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    email = data.get('email')  # Optional email
 
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
@@ -130,10 +132,10 @@ def register():
 
             # Save user to the database
             cur.execute("""
-                INSERT INTO users (username, password)
-                VALUES (%s, %s)
-                RETURNING id, username
-            """, (username, encoded_hash))
+                INSERT INTO users (username, password, email)
+                VALUES (%s, %s, %s)
+                RETURNING id, username, email
+            """, (username, encoded_hash, email))
             user = cur.fetchone()
             conn.commit()
             cur.close()
@@ -172,7 +174,7 @@ def login():
         try:
             cur = conn.cursor()
             cur.execute(
-                "SELECT id, username, password FROM users WHERE username = %s",
+                "SELECT id, username, password, email FROM users WHERE username = %s",
                 (username,)
             )
             user = cur.fetchone()
@@ -185,6 +187,7 @@ def login():
 
             # Retrieve the encoded hash from the database
             encoded_hash_from_db = user[2]  # user[2] is the password column
+            user_email = user[3] if len(user) > 3 else None  # user[3] is the email column
 
             # Decode the base64 hash
             decoded_hash = base64.b64decode(encoded_hash_from_db)
@@ -201,15 +204,20 @@ def login():
                 }
                 token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
                 
-                # Register user session with notification service
+                # Register user session with notification service (including email)
                 try:
+                    session_data = {"user_id": user_id}
+                    if user_email:
+                        session_data["user_email"] = user_email
+                    
                     session_response = requests.post(
                         f"{NOTIFICATION_SERVICE_URL}/notifications/session",
-                        json={"user_id": user_id},
+                        json=session_data,
                         timeout=2
                     )
                     if session_response.status_code == 200:
-                        logging.info(f"✅ User session registered with notification service: {user_id}")
+                        email_info = f" ({user_email})" if user_email else ""
+                        logging.info(f"✅ User session registered with notification service: {user_id}{email_info}")
                     else:
                         logging.warning(f"⚠️  Failed to register session: {session_response.status_code}")
                 except Exception as e:

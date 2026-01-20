@@ -12,5 +12,8 @@ nodes:
   # Portainer port
   - containerPort: 30002
     hostPort: 30002
+  # Mailpit Web UI port
+  - containerPort: 30025
+    hostPort: 30025
 - role: worker
 - role: worker

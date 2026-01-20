@@ -31,7 +31,7 @@ spec:
             - name: PGHOST
               value: "postgres"
             - name: PGHOSTADDR
-              value: "10.96.92.3" # PGHOSTADDR
+              value: "10.96.176.77" # PGHOSTADDR
             - name: PGPORT
               value: "5432"
             - name: TMDB_API_TOKEN
@@ -39,3 +39,11 @@ spec:
                 configMapKeyRef:
                   name: db-config-map
                   key: TMDB_API_TOKEN
+            - name: SMTP_HOST
+              value: "mailpit"
+            - name: SMTP_PORT
+              value: "1025"
+            - name: SMTP_FROM
+              value: "notifications@movieapp.local"
+            - name: EMAIL_ENABLED
+              value: "true"
